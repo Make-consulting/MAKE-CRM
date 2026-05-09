@@ -337,10 +337,28 @@ const CLE="MAKE2026$$";
 let ANNEE=2026,DATA={kpi:null,factures:[],clients:[],prospects:[],depenses:[],sdis:null,immo:null,historique:null},docType='devis',docLignes=[],chartCA=null,chartMix=null,chartHist=null,allProspects=[],allFactures=[];
 
 async function api(action,params={}){
-  const url=new URL(SCRIPT_URL);
-  url.searchParams.set('cle',CLE);url.searchParams.set('action',action);
-  Object.entries(params).forEach(([k,v])=>url.searchParams.set(k,typeof v==='object'?JSON.stringify(v):v));
-  try{const r=await fetch(url.toString());return await r.json();}catch(e){return{erreur:e.message};}
+  return new Promise((resolve)=>{
+    const cbName='cb_'+Date.now()+'_'+Math.random().toString(36).slice(2);
+    const url=new URL(SCRIPT_URL);
+    url.searchParams.set('cle',CLE);
+    url.searchParams.set('action',action);
+    url.searchParams.set('callback',cbName);
+    Object.entries(params).forEach(([k,v])=>url.searchParams.set(k,typeof v==='object'?JSON.stringify(v):v));
+    const script=document.createElement('script');
+    const timer=setTimeout(()=>{
+      delete window[cbName];script.remove();
+      resolve({erreur:'Timeout — vérifie que le déploiement Apps Script est actif'});
+    },15000);
+    window[cbName]=(data)=>{
+      clearTimeout(timer);delete window[cbName];script.remove();resolve(data);
+    };
+    script.src=url.toString();
+    script.onerror=()=>{
+      clearTimeout(timer);delete window[cbName];script.remove();
+      resolve({erreur:'Erreur réseau — vérifie ta connexion'});
+    };
+    document.head.appendChild(script);
+  });
 }
 
 const PAGES={
