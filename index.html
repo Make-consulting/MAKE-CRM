@@ -36,6 +36,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
 .btn{display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border-radius:var(--rs);font-size:13px;font-family:'DM Sans',sans-serif;font-weight:500;cursor:pointer;border:none;transition:all .15s;white-space:nowrap}
 .btn-primary{background:var(--accent);color:#fff}.btn-primary:hover{background:#3d6ef0}
 .btn-ghost{background:transparent;border:1px solid var(--border2);color:var(--text2)}.btn-ghost:hover{border-color:var(--text2);color:var(--text)}
+.btn-mail{background:rgba(245,158,11,0.15);border:1px solid rgba(245,158,11,0.3);color:var(--amber)}.btn-mail:hover{background:rgba(245,158,11,0.25)}
 .btn-success{background:var(--gbg);color:var(--green);border:1px solid rgba(34,197,94,.2)}
 .btn-sm{padding:5px 10px;font-size:11px}
 .content{padding:24px 28px;flex:1}
@@ -99,11 +100,18 @@ tbody td strong{color:var(--text);font-weight:500}
 .bien-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px;flex-wrap:wrap;gap:10px}
 .bien-title{font-size:15px;font-weight:600}
 .bien-addr{font-size:12px;color:var(--text3);margin-top:2px}
-.params-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px;margin-bottom:16px}
+.accordeon{border:1px solid var(--border);border-radius:var(--rs);margin-bottom:14px;overflow:hidden}
+.accordeon-header{display:flex;align-items:center;justify-content:space-between;padding:11px 14px;cursor:pointer;background:var(--bg3);font-size:13px;font-weight:500;user-select:none;transition:background .15s}
+.accordeon-header:hover{background:rgba(255,255,255,0.05)}
+.accordeon-header i.fa-chevron-down{transition:transform .25s;color:var(--text3);font-size:12px}
+.accordeon-header.open i.fa-chevron-down{transform:rotate(180deg)}
+.accordeon-body{display:none;padding:14px}
+.accordeon-body.open{display:block}
+.params-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px}
 .param-row{display:flex;align-items:center;gap:8px;background:var(--bg3);border-radius:var(--rs);padding:8px 12px}
 .param-label{font-size:11px;color:var(--text3);flex:1;white-space:nowrap}
-.param-input{background:transparent;border:none;color:var(--text);font-size:13px;font-weight:600;width:90px;text-align:right;font-family:'DM Sans',sans-serif;outline:none}
-.param-input:focus{color:var(--accent)}
+.param-input{background:transparent;border:none;border-bottom:1px solid var(--border2);color:var(--text);font-size:13px;font-weight:600;width:90px;text-align:right;font-family:'DM Sans',sans-serif;outline:none;padding:2px 4px}
+.param-input:focus{border-bottom-color:var(--accent)}
 .mois-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
 .mois-cell{background:var(--bg3);border:1px solid var(--border);border-radius:var(--rs);padding:10px;cursor:pointer;transition:all .15s;text-align:center}
 .mois-cell:hover{border-color:var(--accent)}
@@ -476,6 +484,10 @@ function changerAnnee(v){ANNEE=parseInt(v);DATA.factures=[];DATA.devis=[];DATA.k
 function curScreen(){const a=document.querySelector('.screen.active');return a?a.id.replace('screen-',''):'dashboard';}
 function ouvrir(id){document.getElementById(id).classList.add('open');}
 function fermer(id){document.getElementById(id).classList.remove('open');}
+function toggleAccordeon(id){
+  const h=document.getElementById(id+'-h'),b=document.getElementById(id+'-b');
+  h.classList.toggle('open');b.classList.toggle('open');
+}
 
 // ── Sync ──────────────────────────────────────────────
 async function syncAll(){
@@ -509,7 +521,7 @@ function renderKPI(){
     <div class="kpi-card" style="--ac:var(--accent)"><div class="kpi-label">CA Facturé ${ANNEE}</div><div class="kpi-value">${fmt(d.ca_facture||0)} €</div><div class="pb"><div class="pf" style="width:${Math.min(pct,100)}%;background:var(--accent)"></div></div><div class="kpi-sub">${pct}% de ${fmt(obj)} €</div></div>
     <div class="kpi-card" style="--ac:var(--green)"><div class="kpi-label">Encaissé</div><div class="kpi-value">${fmt(d.ca_encaisse||0)} €</div><span class="badge b-ok">Payé</span></div>
     <div class="kpi-card" style="--ac:var(--amber)"><div class="kpi-label">En attente</div><div class="kpi-value">${fmt(d.ca_attente||0)} €</div><span class="badge b-warn">À encaisser</span></div>
-    <div class="kpi-card" style="--ac:${pp>40?'var(--red)':'var(--teal)'}"><div class="kpi-label">Part Proform</div><div class="kpi-value">${pp}%</div><span class="badge ${pp>40?'b-danger':'b-ok'}">${pp>40?'⚠ Seuil dépassé':'✓ OK'}</span></div>
+
     <div class="kpi-card" style="--ac:var(--accent2)"><div class="kpi-label">SDIS 77</div><div class="kpi-value">${fmt(d.sdis||0)} €</div><div class="kpi-sub">${Math.round(d.sdis_heures||0)} h · ${ratio_h24} gardes/24h · ${fmt(eur_garde)} €/garde</div></div>
     <div class="kpi-card" style="--ac:var(--teal)"><div class="kpi-label">Immo net</div><div class="kpi-value">${d.immo_net>=0?fmt(d.immo_net):'-'+fmt(Math.abs(d.immo_net))} €</div><div class="kpi-sub">Bien Trilport</div></div>
     ${(d.devis_attente||0)>0?`<div class="kpi-card" style="--ac:var(--amber)"><div class="kpi-label">Devis en attente</div><div class="kpi-value">${d.devis_attente}</div><span class="badge b-warn">Sans réponse</span></div>`:''}`;
@@ -703,9 +715,13 @@ function ouvrirStatutDevis(num,st,ligne){
   ouvrir('mStatutDevis');
 }
 async function saveStatutDevis(){
+  const num=document.getElementById('mSD_num').value;
+  const statut=document.getElementById('mSD_statut').value;
+  const date=document.getElementById('mSD_date').value;
   const ligne=document.getElementById('mSD_ligne').value;
-  const r=await api('modifier_cellule',{onglet:'Devis',ligne,colonne:11,valeur:document.getElementById('mSD_statut').value});
-  if(r&&r.succes!==false){toast('Devis mis à jour ✓','success');fermer('mStatutDevis');loadDevis();}else toast('Erreur','error');
+  const r=await api('modifier_statut_devis',{numero:num,statut,date_reponse:date,ligne});
+  if(r&&r.succes){toast('Devis mis à jour ✓','success');fermer('mStatutDevis');DATA.devis=[];loadDevis();}
+  else toast('Erreur : '+(r?.erreur||'Vérifie le Apps Script v2'),'error');
 }
 
 // ── DÉPENSES ──────────────────────────────────────────
@@ -748,21 +764,48 @@ async function saveSDIS(){
 // ── IMMOBILIER ────────────────────────────────────────
 async function loadImmobilier(){
   const r=await api('lire_immobilier');DATA.immo=r;
+  if(!DATA.locataires.length){const lr=await api('lire_locataires');DATA.locataires=lr.locataires||[];}
+  const locs=DATA.locataires;
   const params=r.paramLabels||[];const mensuel=r.mensuel||[];const hist=r.historique||[];
   const mN=['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
   document.getElementById('immoBiens').innerHTML=`
     <div class="bien-bloc">
       <div class="bien-top">
         <div><div class="bien-title">41 rue du Maréchal Joffre</div><div class="bien-addr">77470 Trilport</div></div>
-        <div style="text-align:right"><div style="font-size:10px;color:var(--text3)">Locataire actuel</div><div style="font-weight:600">${r.locataire?.['Nom']||'Non renseigné'}</div></div>
+        <div style="text-align:right;min-width:200px">
+          <div style="font-size:10px;color:var(--text3);margin-bottom:4px">Locataire actuel</div>
+          <select class="fs" style="width:200px" onchange="assignerLocataire(this.value)">
+            <option value="">— Non assigné —</option>
+            ${locs.map(l=>`<option value="${l['Nom complet']||''}">${l['Nom complet']||''}</option>`).join('')}
+          </select>
+        </div>
       </div>
-      <div style="font-size:12px;font-weight:600;color:var(--text2);margin-bottom:10px">Paramètres du bien — modifiables</div>
-      <div class="params-grid">${params.map(p=>`<div class="param-row"><span class="param-label">${p.label}</span><input class="param-input" type="number" value="${p.valeur||0}" onblur="saveParam('${p.label}',this.value)" step="0.01"> €</div>`).join('')}</div>
+      <div class="accordeon">
+        <div class="accordeon-header" id="acc-params-h" onclick="toggleAccordeon('acc-params')">
+          <span><i class="fa-solid fa-sliders" style="margin-right:8px;color:var(--text3)"></i>Paramètres du bien</span>
+          <i class="fa-solid fa-chevron-down"></i>
+        </div>
+        <div class="accordeon-body" id="acc-params-b">
+          <div class="params-grid">${params.map(p=>`
+            <div class="param-row">
+              <span class="param-label">${p.label}</span>
+              <input class="param-input" type="text" value="${p.valeur||0}" onblur="saveParam('${p.label}',this.value)">
+              <span style="font-size:11px;color:var(--text3)">€</span>
+            </div>`).join('')}
+          </div>
+          <div style="margin-top:10px;font-size:11px;color:var(--text3)"><i class="fa-solid fa-circle-info" style="margin-right:4px"></i>Cliquez en dehors du champ pour sauvegarder</div>
+        </div>
+      </div>
       <div style="font-size:12px;font-weight:600;color:var(--text2);margin:14px 0 10px">Paiements 2026 — cliquer pour valider</div>
       <div class="mois-grid">${mN.map((m,i)=>{const d=mensuel[i]||{};const p=d.statut==='Payé';return`<div class="mois-cell ${p?'paye':''}" onclick="ouvrirLoyer('${m}',${d._ligne||(28+i)})"><div class="mn">${m.substring(0,3)}</div><div class="mv">${p?fmt(d.loyer_recu||890)+' €':'—'}</div><div class="mi">${p?'✅':'⬜'}</div></div>`;}).join('')}</div>
     </div>`;
   document.getElementById('immoHistoCard').style.display='block';
   document.getElementById('tbImmoHist').innerHTML=hist.map(h=>`<tr><td><strong>${h.annee}</strong></td><td class="tn">${fmt(h.total_loyers||0)} €</td><td class="tn">${fmt(h.credit||0)} €</td><td class="tn">${fmt(h.charges_reelles||0)} €</td><td class="tn">${fmt(h.impots||0)} €</td><td class="tn" style="font-weight:700;color:${(h.net||0)<0?'var(--red)':'var(--green)'}">${fmt(h.net||0)} €</td></tr>`).join('');
+}
+async function assignerLocataire(nom){
+  if(!nom)return;
+  const r=await api('modifier_parametre_bien',{param:'Locataire actuel',valeur:nom});
+  if(r.succes)toast('Locataire assigné ✓','success');else toast('Erreur','error');
 }
 async function saveParam(param,valeur){
   const r=await api('modifier_parametre_bien',{param,valeur});
@@ -960,6 +1003,105 @@ function fmt(n){return Math.round(parseFloat(n)||0).toLocaleString('fr-FR');}
 function fmtDate(d){if(!d)return'';if(typeof d==='string'&&(d.includes('/')||d.match(/^\d{4}-\d{2}-\d{2}$/)))return d.includes('/')?d:new Date(d).toLocaleDateString('fr-FR');try{return new Date(d).toLocaleDateString('fr-FR');}catch(e){return String(d);}}
 function moisIdx(m){return{'janvier':0,'février':1,'fevrier':1,'mars':2,'avril':3,'mai':4,'juin':5,'juillet':6,'août':7,'aout':7,'septembre':8,'octobre':9,'novembre':10,'décembre':11,'decembre':11}[(m||'').toLowerCase()]??-1;}
 function toast(msg,type='success'){const el=document.getElementById('toast');el.innerHTML=`<i class="fa-solid fa-${type==='success'?'check':'exclamation'}-circle"></i> ${msg}`;el.className=`show ${type}`;setTimeout(()=>el.classList.remove('show'),4000);}
+
+
+// ── ENVOI MAIL ────────────────────────────────────────
+function envoyerParMail(){
+  let client={nom:'Client',email:'',addr:'',siren:''};
+  try{const v=document.getElementById('docClient')?.value;if(v)client=JSON.parse(v);}catch(e){}
+  const num=document.getElementById('docNum')?.value||'';
+  const date=document.getElementById('docDate')?.value||'';
+  const ds=date?new Date(date).toLocaleDateString('fr-FR',{day:'numeric',month:'long',year:'numeric'}):'';
+  const tva=parseInt(document.getElementById('docTVA')?.value||'0');
+  const totHT=docLignes.reduce((s,l)=>s+(parseFloat(l.pu)||0),0);
+  const tvaAmt=Math.round(totHT*tva/100*100)/100;
+  const ttc=totHT+tvaAmt;
+  const typeDoc=docType==='devis'?'devis':'facture';
+  const typeDocMaj=docType==='devis'?'Devis':'Facture';
+  if(!client.email){toast('Aucun email pour ce client — renseignez-le dans la fiche client','error');return;}
+  const sujet=encodeURIComponent(`${typeDocMaj} ${num} — MAKE Consulting`);
+  const htStr=totHT.toLocaleString('fr-FR',{minimumFractionDigits:2});
+  const ttcStr=ttc.toLocaleString('fr-FR',{minimumFractionDigits:2});
+  const tvaInfo=tva===0?'(TVA non applicable — formation professionnelle continue)':`TVA 20% incluse`;
+  const corps=encodeURIComponent(`Bonjour,
+
+Veuillez trouver ci-joint le ${typeDoc} n°${num} en date du ${ds} pour un montant de ${htStr} € HT ${tvaInfo} — soit ${ttcStr} € TTC.
+
+⚠️ Pièce jointe : merci d'imprimer/exporter le ${typeDoc} en PDF via le bouton "PDF" de l'application MAKE CRM, puis de l'attacher à ce mail avant envoi.
+
+Pour toute question, n'hésitez pas à me contacter.
+
+Cordialement,
+Maxence SOILEUX
+MAKE Consulting
+msoileux.make@gmail.com`);
+  window.location.href=`mailto:${client.email}?subject=${sujet}&body=${corps}`;
+  toast('Mail ouvert vers '+client.email,'info');
+}
+
+// ── RELANCE FACTURE ───────────────────────────────────
+function relancerFacture(num,client,montant){
+  const sujet=encodeURIComponent(`Relance — Facture ${num} — MAKE Consulting`);
+  const corps=encodeURIComponent(`Bonjour,
+
+Je me permets de vous relancer concernant la facture ${num} d'un montant de ${Math.round(parseFloat(montant)||0).toLocaleString('fr-FR')} € HT, qui reste à ce jour en attente de règlement.
+
+Pourriez-vous me confirmer la date prévisionnelle de paiement ?
+
+Je reste disponible pour tout complément d'information.
+
+Cordialement,
+Maxence SOILEUX
+MAKE Consulting
+msoileux.make@gmail.com`);
+  window.location.href=`mailto:?subject=${sujet}&body=${corps}`;
+  toast('Mail de relance ouvert','info');
+}
+
+// ── FISCALITE ─────────────────────────────────────────
+async function loadFiscalite(){
+  if(!DATA.factures.length){const r=await api('lire_factures',{annee:ANNEE});DATA.factures=r.factures||[];allFact=DATA.factures;}
+  if(!DATA.depenses.length){const r=await api('lire_depenses',{annee:ANNEE});DATA.depenses=r.depenses||[];}
+  const fact=DATA.factures;const dep=DATA.depenses;
+  const tvaColl=fact.filter(f=>parseFloat(f['TVA (%)']||0)>0).reduce((s,f)=>s+(parseFloat(f['TVA (€)'])||0),0);
+  const tvaDeduc=dep.filter(d=>parseFloat(d['TVA (%)']||0)>0).reduce((s,d)=>s+(parseFloat(d['TVA (€)'])||0),0);
+  const tvaAReverse=Math.max(0,tvaColl-tvaDeduc);
+  const caParTri=[0,0,0,0];
+  fact.forEach(f=>{const m=moisIdx(f['Mois']);if(m>=0){const t=Math.floor(m/3);caParTri[t]+=parseFloat(f['Montant HT (€)'])||0;}});
+  const tvaSem1=fact.filter(f=>{const m=moisIdx(f['Mois']);return m>=0&&m<=5&&parseFloat(f['TVA (%)']||0)>0;}).reduce((s,f)=>s+(parseFloat(f['TVA (€)'])||0),0);
+  const tvaSem2=fact.filter(f=>{const m=moisIdx(f['Mois']);return m>=6&&m<=11&&parseFloat(f['TVA (%)']||0)>0;}).reduce((s,f)=>s+(parseFloat(f['TVA (€)'])||0),0);
+  const caTotal=fact.reduce((s,f)=>s+(parseFloat(f['Montant HT (€)'])||0),0);
+  const tauxURS=0.242;
+  const fiscKPI=document.getElementById('fiscKPI');
+  if(fiscKPI)fiscKPI.innerHTML=`
+    <div class="kpi-card" style="--ac:var(--teal)"><div class="kpi-label">TVA collectée</div><div class="kpi-value">${fmt(tvaColl)} €</div><div class="kpi-sub">Factures avec TVA 20%</div></div>
+    <div class="kpi-card" style="--ac:var(--amber)"><div class="kpi-label">TVA à reverser</div><div class="kpi-value">${fmt(tvaAReverse)} €</div><div class="kpi-sub">Après déduction achats</div></div>
+    <div class="kpi-card" style="--ac:var(--accent)"><div class="kpi-label">URSSAF estimé</div><div class="kpi-value">${fmt(caTotal*tauxURS)} €</div><div class="kpi-sub">Base : ${fmt(caTotal)} € × 24,2%</div></div>`;
+  const tvaGrid=document.getElementById('fiscTVAGrid');
+  if(tvaGrid)tvaGrid.innerHTML=`
+    <div class="tri-card"><div class="tri-label">S1 (Jan–Jun)</div><div class="tri-val" style="color:var(--teal)">${fmt(tvaSem1)} €</div></div>
+    <div class="tri-card"><div class="tri-label">S2 (Jul–Déc)</div><div class="tri-val" style="color:var(--teal)">${fmt(tvaSem2)} €</div></div>
+    <div class="tri-card" style="grid-column:span 2"><div class="tri-label">Total annuel</div><div class="tri-val" style="color:var(--teal)">${fmt(tvaColl)} €</div></div>`;
+  const elColl=document.getElementById('fiscTVAcoll');if(elColl)elColl.textContent=fmt(tvaColl)+' €';
+  const elDed=document.getElementById('fiscTVAdeduc');if(elDed)elDed.textContent=fmt(tvaDeduc)+' €';
+  const elDue=document.getElementById('fiscTVAdue');if(elDue)elDue.textContent=fmt(tvaAReverse)+' €';
+  const ursGrid=document.getElementById('fiscURSGrid');
+  if(ursGrid)ursGrid.innerHTML=['T1 (Jan–Mar)','T2 (Avr–Jun)','T3 (Jul–Sep)','T4 (Oct–Déc)'].map((label,i)=>`
+    <div class="tri-card"><div class="tri-label">${label}</div><div class="tri-val" style="color:var(--accent)">${fmt(caParTri[i])} €</div><div style="font-size:10px;color:var(--text3);margin-top:2px">→ ${fmt(caParTri[i]*tauxURS)} € URS</div></div>`).join('');
+  const elBase=document.getElementById('fiscURSBase');if(elBase)elBase.textContent=fmt(caTotal)+' €';
+  const elAnn=document.getElementById('fiscURSAnnuel');if(elAnn)elAnn.textContent=fmt(caTotal*tauxURS)+' €';
+  const cfe=JSON.parse(localStorage.getItem('cfe_'+ANNEE)||'{}');
+  const cfeMont=document.getElementById('cfeMontant');if(cfeMont&&cfe.montant)cfeMont.value=cfe.montant;
+  const cfeD=document.getElementById('cfeDate');if(cfeD&&cfe.date)cfeD.value=cfe.date;
+  const cfeSt=document.getElementById('cfeStatut');if(cfeSt&&cfe.statut)cfeSt.value=cfe.statut;
+}
+function saveCFE(){
+  const cfe={montant:document.getElementById('cfeMontant')?.value,date:document.getElementById('cfeDate')?.value,statut:document.getElementById('cfeStatut')?.value};
+  localStorage.setItem('cfe_'+ANNEE,JSON.stringify(cfe));toast('CFE sauvegardé ✓','success');
+}
+
+// ── BOUTON ENVOI MAIL DANS DOC ────────────────────────
+function getBtnMailEl(){return document.getElementById('btnEnvoyerMail');}
 
 document.addEventListener('DOMContentLoaded',()=>{
   document.querySelectorAll('.mo').forEach(m=>m.addEventListener('click',e=>{if(e.target===m)m.classList.remove('open');}));
