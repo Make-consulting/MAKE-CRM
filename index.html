@@ -282,6 +282,7 @@ tbody td strong{color:var(--text);font-weight:500}
             <div style="display:flex;gap:8px">
               <button class="btn btn-ghost btn-sm" id="btnSauvegarderDoc" onclick="sauvegarderDocument()"><i class="fa-solid fa-floppy-disk"></i> Enregistrer dans Sheets</button>
               <button class="btn btn-ghost btn-sm" onclick="imprimerDoc()"><i class="fa-solid fa-print"></i> PDF</button>
+              <button class="btn btn-mail btn-sm" id="btnEnvoyerMail" onclick="envoyerParMail()"><i class="fa-solid fa-envelope"></i> Envoyer par mail</button>
             </div>
           </div>
           <div class="doc-preview" id="docPreview" style="min-height:380px"></div>
@@ -903,7 +904,8 @@ async function initNouveauDoc(){
   document.getElementById('docDate').value=new Date().toISOString().split('T')[0];
   const sel=document.getElementById('docClient');
   sel.innerHTML='<option value="">— Sélectionner —</option>';
-  CLIENTS_LISTE.forEach(c=>{const o=document.createElement('option');o.value=JSON.stringify(c);o.textContent=c.nom;sel.appendChild(o);});
+  if(!DATA.clients.length){const cr=await api('lire_clients');DATA.clients=cr.clients||[];}
+  DATA.clients.forEach(c=>{const o=document.createElement('option');const addr=[c['Adresse'],c['CP'],c['Ville']].filter(Boolean).join(', ');o.value=JSON.stringify({nom:c['Entreprise']||'',email:c['Email']||'',addr,siren:c['SIREN/SIRET']||'',tva:parseInt(c['TVA (%)']||'0')||0});o.textContent=c['Entreprise']||'';sel.appendChild(o);});
   setDocType('devis');docLignes=[];ajouterLigneDoc();
   // Générer numéro auto
   const r=await api('generer_numero_devis',{annee:ANNEE});
@@ -919,6 +921,7 @@ function setDocType(t){
   document.getElementById('quittanceFields').style.display=t==='quittance'?'block':'none';
   document.getElementById('docPeriodeWrap').style.display=t==='facture'?'block':'none';
   document.getElementById('btnSauvegarderDoc').style.display=t==='quittance'?'none':'inline-flex';
+  document.getElementById('btnEnvoyerMail').style.display=t==='quittance'?'none':'inline-flex';
   if(t!=='quittance'){
     api('generer_numero_'+(t==='devis'?'devis':'facture'),{annee:ANNEE}).then(r=>{
       docNumActuel=r.numero||((t==='devis'?'DV':'FA')+ANNEE+'-001');
