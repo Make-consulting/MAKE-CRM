@@ -170,6 +170,7 @@ tbody td strong{color:var(--text);font-weight:500}
   <div class="sidebar-footer">
     <button class="sync-btn" id="syncBtn" onclick="syncAll()"><i class="fa-solid fa-rotate"></i> Synchroniser Sheets</button>
     <div id="lastSync" style="font-size:10px;text-align:center;color:var(--text3)">Non synchronisé</div>
+    <button class="sync-btn" style="margin-top:6px" onclick="ouvrirConfig()"><i class="fa-solid fa-gear"></i> Paramètres</button>
   </div>
 </aside>
 
@@ -417,7 +418,7 @@ tbody td strong{color:var(--text);font-weight:500}
 
 <!-- Modal FireTraining vente -->
 <div class="mo" id="mFire"><div class="modal">
-  <div class="modal-title">Nouvelle vente FireTraining MS</div>
+  <div class="modal-title"><i class="fa-solid fa-mobile-screen"></i> Nouvelle vente FireTraining MS</div>
   <div class="fr"><div class="fg"><label class="fl">Client / Organisme *</label><input class="fi" id="fClient"></div><div class="fg"><label class="fl">Contact</label><input class="fi" id="fContact"></div></div>
   <div class="fr"><div class="fg"><label class="fl">Email</label><input class="fi" id="fEmail"></div><div class="fg"><label class="fl">Téléphone</label><input class="fi" id="fTel"></div></div>
   <div class="fr"><div class="fg"><label class="fl">Nb licences</label><input class="fi" type="number" id="fNb" value="1" min="1"></div><div class="fg"><label class="fl">Prix unitaire HT (€)</label><input class="fi" type="number" id="fPrix" step="0.01"></div></div>
@@ -425,9 +426,46 @@ tbody td strong{color:var(--text);font-weight:500}
   <div class="modal-footer"><button class="btn btn-ghost" onclick="fermer('mFire')">Annuler</button><button class="btn btn-primary" onclick="saveFire()">Enregistrer</button></div>
 </div></div>
 
+<div class="mo" id="mConfig">
+<div class="modal" style="max-width:480px">
+  <div class="modal-title"><i class="fa-solid fa-gear"></i> Configuration API</div>
+  <p style="font-size:12px;color:var(--text3);margin-bottom:18px">Ces informations sont stockées localement dans votre navigateur et ne sont jamais partagées.</p>
+  <div class="fg"><label class="fl">URL du Apps Script *</label><input class="fi" id="cfgUrl" placeholder="https://script.google.com/macros/s/..."></div>
+  <div class="fg"><label class="fl">Clé secrète API *</label><input class="fi" id="cfgCle" type="password" placeholder="Votre clé secrète"></div>
+  <div id="cfgErr" style="color:var(--red);font-size:12px;display:none;margin-bottom:10px"></div>
+  <div class="modal-footer">
+    <button class="btn btn-ghost" id="cfgCancel" onclick="fermer('mConfig')">Annuler</button>
+    <button class="btn btn-primary" onclick="sauvegarderConfig()"><i class="fa-solid fa-floppy-disk"></i> Enregistrer</button>
+  </div>
+</div></div>
+
 <script>
-const SCRIPT_URL="https://script.google.com/macros/s/AKfycbzcmJ85wr7qaQU-75tYN67jIIUaPOS5py2aJTYCp5-KAxZ_UILnc8EBDagtlojyWV6X/exec";
-const CLE="MAKE2026$$";
+let CONFIG={url:'',cle:''};
+function chargerConfig(){
+  try{const c=JSON.parse(localStorage.getItem('make_crm_config')||'null');if(c&&c.url&&c.cle){CONFIG=c;return true;}}catch(e){}
+  return false;
+}
+function sauvegarderConfig(){
+  const url=document.getElementById('cfgUrl').value.trim();
+  const cle=document.getElementById('cfgCle').value.trim();
+  const err=document.getElementById('cfgErr');
+  if(!url||!cle){err.textContent='Veuillez remplir tous les champs.';err.style.display='block';return;}
+  err.style.display='none';
+  CONFIG={url,cle};
+  localStorage.setItem('make_crm_config',JSON.stringify(CONFIG));
+  fermer('mConfig');
+  toast('Configuration enregistrée','success');
+  if(!DATA.kpi)loadDashboard();
+}
+function ouvrirConfig(premier=false){
+  const m=document.getElementById('mConfig');
+  if(premier){m.dataset.required='1';}else{delete m.dataset.required;}
+  document.getElementById('cfgUrl').value=CONFIG.url||'';
+  document.getElementById('cfgCle').value=CONFIG.cle||'';
+  document.getElementById('cfgCancel').style.display=premier?'none':'';
+  document.getElementById('cfgErr').style.display='none';
+  ouvrir('mConfig');
+}
 let ANNEE=2026;
 let DATA={kpi:null,factures:[],devis:[],clients:[],prospects:[],depenses:[],sdis:null,immo:null,locataires:[],historique:null,firetraining:null};
 let allFact=[],allDevis=[],allProsp=[];
@@ -447,8 +485,8 @@ const CLIENTS_LISTE=[
 async function api(action,params={}){
   return new Promise(resolve=>{
     const cb='cb_'+Date.now()+'_'+Math.random().toString(36).slice(2);
-    const url=new URL(SCRIPT_URL);
-    url.searchParams.set('cle',CLE);url.searchParams.set('action',action);url.searchParams.set('callback',cb);
+    const url=new URL(CONFIG.url);
+    url.searchParams.set('cle',CONFIG.cle);url.searchParams.set('action',action);url.searchParams.set('callback',cb);
     Object.entries(params).forEach(([k,v])=>url.searchParams.set(k,typeof v==='object'?JSON.stringify(v):v));
     const s=document.createElement('script');
     const t=setTimeout(()=>{delete window[cb];s.remove();resolve({erreur:'Timeout'});},15000);
@@ -1108,8 +1146,8 @@ function saveCFE(){
 function getBtnMailEl(){return document.getElementById('btnEnvoyerMail');}
 
 document.addEventListener('DOMContentLoaded',()=>{
-  document.querySelectorAll('.mo').forEach(m=>m.addEventListener('click',e=>{if(e.target===m)m.classList.remove('open');}));
-  loadDashboard();
+  document.querySelectorAll('.mo').forEach(m=>m.addEventListener('click',e=>{if(e.target===m&&!m.dataset.required)m.classList.remove('open');}));
+  if(!chargerConfig()){ouvrirConfig(true);}else{loadDashboard();}
 });
 </script>
 </body>
