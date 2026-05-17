@@ -2,7 +2,7 @@
 // MAKE CONSULTING — Apps Script v2
 // ============================================================
 const CLE_SECRETE = "MAKE2026$$";
-const SHEET_ID = "TON_ID_GOOGLE_SHEET"; // ← remplace par ton ID Sheets
+const SHEET_ID = "12D4PMPBbMYjOiFtglAbZHm0SmlT7la944VqsOBajkb8"; // ← remplace par ton ID Sheets
 
 function doGet(e) { globalThis._currentEvent = e; return handleRequest(e); }
 function doPost(e) { globalThis._currentEvent = e; return handleRequest(e); }
@@ -12,6 +12,8 @@ function handleRequest(e) {
     const params = e.parameter || {};
     const postData = e.postData ? JSON.parse(e.postData.contents || "{}") : {};
     const data = Object.assign({}, params, postData);
+    // Action publique : pas de clé principale requise
+    if (data.action === "recevoir_lead_site") return jsonResponse(recevoirLeadSite(data));
     if (data.cle !== CLE_SECRETE) return jsonResponse({ erreur: "Accès refusé" });
     switch (data.action || "") {
       case "lire_config":              return jsonResponse(lireConfig());
@@ -45,6 +47,52 @@ function handleRequest(e) {
       default: return jsonResponse({ erreur: "Action inconnue : "+(data.action||"") });
     }
   } catch(err) { return jsonResponse({ erreur: err.message }); }
+}
+
+// ── Lead depuis formulaire site web ──────────────────────────
+function recevoirLeadSite(data) {
+  if (data.token !== "MAKE-SITE-2026") return { erreur: "Token invalide" };
+  const sheet = SpreadsheetApp.openById(SHEET_ID).getSheetByName("Prospects");
+  if (!sheet) return { erreur: "Onglet Prospects introuvable" };
+  const id = "PRO-" + String(sheet.getLastRow() - 1).padStart(3, "0");
+  const annee = new Date().getFullYear();
+  const entreprise = (data.organisation || "").trim() || "Particulier";
+  const interlocuteur = ((data.prenom || "") + " " + (data.nom || "")).trim();
+  const auj = new Date().toLocaleDateString("fr-FR");
+  const relance = ajouterJoursOuvres(new Date(), 3).toLocaleDateString("fr-FR");
+  sheet.appendRow([
+    id, annee, entreprise, "", interlocuteur, "",
+    data.telephone || "", data.email || "", data.objet || "",
+    "Site web", "Lead", "B",
+    auj, auj, relance,
+    "Non", "", "", data.message || "", "[]"
+  ]);
+  try {
+    const sujet = "Nouveau lead site — " + entreprise;
+    const corps =
+      "Nouveau lead reçu depuis le site web.\n\n" +
+      "Nom : " + interlocuteur + "\n" +
+      "Organisation : " + entreprise + "\n" +
+      "Email : " + (data.email || "—") + "\n" +
+      "Téléphone : " + (data.telephone || "—") + "\n" +
+      "Objet : " + (data.objet || "—") + "\n\n" +
+      "Message :\n" + (data.message || "—") + "\n\n" +
+      "Prospect enregistré : " + id + "\n" +
+      "Relance suggérée : " + relance;
+    MailApp.sendEmail("msoileux.make@gmail.com", sujet, corps);
+  } catch(e) {}
+  return { succes: true, id };
+}
+
+function ajouterJoursOuvres(date, n) {
+  const d = new Date(date);
+  let ajoutes = 0;
+  while (ajoutes < n) {
+    d.setDate(d.getDate() + 1);
+    const j = d.getDay();
+    if (j !== 0 && j !== 6) ajoutes++;
+  }
+  return d;
 }
 
 function lireConfig() {
@@ -184,7 +232,6 @@ function modifierStatutDevis(numero,statut,dateReponse,ligne) {
   let sheet=ss.getSheetByName("Devis");
   if(!sheet)return{erreur:"Onglet Devis introuvable"};
   const data=sheet.getDataRange().getValues();
-  // Chercher par numéro ou par ligne
   for(let i=2;i<data.length;i++){
     if(String(data[i][1])===String(numero)||String(i+1)===String(ligne)){
       sheet.getRange(i+1,11).setValue(statut);
@@ -192,7 +239,6 @@ function modifierStatutDevis(numero,statut,dateReponse,ligne) {
       return{succes:true,ligne:i+1};
     }
   }
-  // Fallback : ligne directe
   if(ligne&&parseInt(ligne)>2){
     sheet.getRange(parseInt(ligne),11).setValue(statut);
     if(dateReponse)sheet.getRange(parseInt(ligne),12).setValue(dateReponse);
