@@ -42,8 +42,11 @@ function handleRequest(e) {
       case "modifier_parametre_bien":  return jsonResponse(modifierParametreBien(data.param,data.valeur));
       case "saisir_sdis_mois":         return jsonResponse(saisirSDISMois(data.mois_ligne,data.vacations,data.heures));
       case "ajouter_vente_firetraining": return jsonResponse(ajouterVenteFiretraining(JSON.parse(data.vente)));
-      case "generer_numero_facture":   return jsonResponse(genererNumeroFacture(parseInt(data.annee)||2026));
-      case "generer_numero_devis":     return jsonResponse(genererNumeroDevis(parseInt(data.annee)||2026));
+      case "generer_numero_facture":      return jsonResponse(genererNumeroFacture(parseInt(data.annee)||2026));
+      case "generer_numero_devis":        return jsonResponse(genererNumeroDevis(parseInt(data.annee)||2026));
+      case "modifier_statut_prospect":    return jsonResponse(modifierStatutProspect(parseInt(data.ligne),data.statut));
+      case "ajouter_historique_prospect": return jsonResponse(ajouterHistoriqueProspect(parseInt(data.ligne),data.type,data.commentaire));
+      case "modifier_relance_prospect":   return jsonResponse(modifierRelanceProspect(parseInt(data.ligne),data.date_relance));
       default: return jsonResponse({ erreur: "Action inconnue : "+(data.action||"") });
     }
   } catch(err) { return jsonResponse({ erreur: err.message }); }
@@ -332,6 +335,35 @@ function ajouterVenteFiretraining(v) {
   const pu=parseFloat(v.prix_unitaire)||0,nb=parseInt(v.nb_licences)||1,ht=pu*nb,tva_e=Math.round(ht*0.20*100)/100;
   sheet.appendRow([numero,annee,new Date().toLocaleDateString("fr-FR"),v.client||"",v.contact||"",v.email||"",v.telephone||"",nb,pu,ht,20,ht+tva_e,"","À facturer",v.notes||""]);
   return{succes:true,numero};
+}
+
+function modifierStatutProspect(ligne,statut) {
+  const sheet=SpreadsheetApp.openById(SHEET_ID).getSheetByName("Prospects");
+  if(!sheet)return{erreur:"Onglet Prospects introuvable"};
+  sheet.getRange(ligne,11).setValue(statut);
+  sheet.getRange(ligne,14).setValue(new Date().toLocaleDateString("fr-FR"));
+  return{succes:true};
+}
+
+function ajouterHistoriqueProspect(ligne,type,commentaire) {
+  const sheet=SpreadsheetApp.openById(SHEET_ID).getSheetByName("Prospects");
+  if(!sheet)return{erreur:"Onglet Prospects introuvable"};
+  const raw=sheet.getRange(ligne,20).getValue()||"[]";
+  let hist=[];
+  try{hist=JSON.parse(raw);}catch(e){hist=[];}
+  hist.push({date:new Date().toLocaleDateString("fr-FR"),type:type||"",commentaire:commentaire||""});
+  sheet.getRange(ligne,20).setValue(JSON.stringify(hist));
+  sheet.getRange(ligne,14).setValue(new Date().toLocaleDateString("fr-FR"));
+  return{succes:true};
+}
+
+function modifierRelanceProspect(ligne,dateRelance) {
+  const sheet=SpreadsheetApp.openById(SHEET_ID).getSheetByName("Prospects");
+  if(!sheet)return{erreur:"Onglet Prospects introuvable"};
+  let valeur=dateRelance||"";
+  if(valeur.includes("-")){const p=valeur.split("-");if(p.length===3)valeur=p[2]+"/"+p[1]+"/"+p[0];}
+  sheet.getRange(ligne,15).setValue(valeur);
+  return{succes:true};
 }
 
 function genererNumeroFacture(annee) {
