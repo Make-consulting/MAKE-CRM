@@ -441,6 +441,21 @@ tbody td strong{color:var(--text);font-weight:500}
   <div class="modal-footer"><button class="btn btn-ghost" onclick="fermer('mProspect')">Annuler</button><button class="btn btn-primary" onclick="saveProspect()">Ajouter</button></div>
 </div></div>
 
+<!-- Modal Changer Statut Prospect -->
+<div class="mo" id="mChangerStatut"><div class="modal" style="max-width:320px">
+  <div class="modal-title">Changer le statut</div>
+  <div class="fg"><label class="fl">Nouveau statut</label>
+    <select class="fs" id="mCS_statut">
+      <option>Contacté</option>
+      <option>En cours</option>
+      <option>Converti</option>
+      <option>Abandonné</option>
+    </select>
+  </div>
+  <input type="hidden" id="mCS_ligne">
+  <div class="modal-footer"><button class="btn btn-ghost" onclick="fermer('mChangerStatut')">Annuler</button><button class="btn btn-primary" onclick="changerStatutProspect()">Confirmer</button></div>
+</div></div>
+
 <!-- Modal Dépense -->
 <div class="mo" id="mDepense"><div class="modal">
   <div class="modal-title">Ajouter une dépense</div>
@@ -766,13 +781,13 @@ function cardHTML(p,colId){
   const prioBadge=`<span class="badge ${prio==='A'?'b-danger':prio==='B'?'b-warn':'b-info'}">${prio}</span>`;
   const email=p['Email']||'';
   const mailBtn=email?`<a href="mailto:${email}?subject=${encodeURIComponent('MAKE Consulting — '+(p['Entreprise']||''))}" class="btn btn-mail btn-sm"><i class="fa-solid fa-envelope"></i></a>`:'';
-  const convertBtn=colId==='en-cours'?`<button class="btn btn-success btn-sm" onclick="convertirProspect(${p._ligne})"><i class="fa-solid fa-check"></i> Convertir</button>`:'';
+  const statutBtn=`<button class="btn btn-ghost btn-sm" onclick="ouvrirChangerStatut(${p._ligne})" title="Changer le statut"><i class="fa-solid fa-right-left"></i></button>`;
   return `<div class="kcard" style="${cardBg(colId)}">
     <div class="kcard-top"><div class="kcard-title">${p['Entreprise']||'—'}</div>${prioBadge}</div>
     <div class="kcard-interlo">${p['Interlocuteur']||''}</div>
     <div class="kcard-meta">${[p['Type prestation'],p['Source']].filter(Boolean).join(' · ')}</div>
     ${relanceHTML(p['Date relance'])}
-    <div class="kcard-actions">${mailBtn}${convertBtn}</div>
+    <div class="kcard-actions">${mailBtn}${statutBtn}</div>
     <div class="kcard-hist-toggle" onclick="toggleHist(${p._ligne},this)"><i class="fa-solid fa-chevron-down"></i> Historique</div>
     ${histHTML(p)}
   </div>`;
@@ -818,9 +833,15 @@ async function ajouterActionHist(ligne,btn){
   if(r.succes){toast('Action enregistrée ✓','success');loadProspects();}
   else toast('Erreur : '+(r.erreur||''),'error');
 }
-async function convertirProspect(ligne){
-  const r=await api('modifier_statut_prospect',{ligne,statut:'Converti'});
-  if(r.succes){toast('Prospect converti ✓','success');loadProspects();}
+function ouvrirChangerStatut(ligne){
+  document.getElementById('mCS_ligne').value=ligne;
+  ouvrir('mChangerStatut');
+}
+async function changerStatutProspect(){
+  const ligne=+document.getElementById('mCS_ligne').value;
+  const statut=document.getElementById('mCS_statut').value;
+  const r=await api('modifier_statut_prospect',{ligne,statut});
+  if(r.succes){toast('Statut mis à jour ✓','success');fermer('mChangerStatut');loadProspects();}
   else toast('Erreur : '+(r.erreur||''),'error');
 }
 async function saveProspect(){
