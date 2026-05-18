@@ -68,19 +68,21 @@ function recevoirLeadSite(data) {
     "Non", "", "", data.message || "", "[]"
   ]);
   try {
-    const sujet = "Nouveau lead site — " + entreprise;
+    const objet = data.objet || "—";
+    const sujet = "🔔 Nouveau lead site — " + entreprise + " (" + objet + ")";
     const corps =
-      "Nouveau lead reçu depuis le site web.\n\n" +
       "Nom : " + interlocuteur + "\n" +
-      "Organisation : " + entreprise + "\n" +
+      "Entreprise : " + entreprise + "\n" +
       "Email : " + (data.email || "—") + "\n" +
       "Téléphone : " + (data.telephone || "—") + "\n" +
-      "Objet : " + (data.objet || "—") + "\n\n" +
-      "Message :\n" + (data.message || "—") + "\n\n" +
-      "Prospect enregistré : " + id + "\n" +
-      "Relance suggérée : " + relance;
+      "Objet : " + objet + "\n" +
+      "Message : " + (data.message || "—") + "\n" +
+      "Date : " + auj + "\n" +
+      "Lien direct Sheets : https://docs.google.com/spreadsheets/d/" + SHEET_ID;
     MailApp.sendEmail("msoileux.make@gmail.com", sujet, corps);
-  } catch(e) {}
+  } catch(e) {
+    Logger.log("Erreur envoi mail notification lead : " + e.message);
+  }
   return { succes: true, id };
 }
 
