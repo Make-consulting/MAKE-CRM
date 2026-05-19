@@ -18,7 +18,7 @@ function handleRequest(e) {
     switch (data.action || "") {
       case "lire_config":              return jsonResponse(lireConfig());
       case "lire_kpi":                 return jsonResponse(lireKPI(parseInt(data.annee)||2026));
-      case "lire_factures":            return jsonResponse(lireOngletFiltre("Factures",data.annee,0));
+      case "lire_factures":            {const _rf=lireOngletFiltre("Factures",data.annee,0);(_rf.factures||[]).forEach(f=>{f.jours=parseFloat(f["Jours passés"])||0;});return jsonResponse(_rf);}
       case "lire_devis":               return jsonResponse(lireDevis(data.annee));
       case "lire_clients":             return jsonResponse(lireClients());
       case "lire_prospects":           return jsonResponse(lireOngletFiltre("Prospects",data.annee,1));
@@ -111,11 +111,39 @@ function lireConfig() {
 
 function lireKPI(annee) {
   const ss = SpreadsheetApp.openById(SHEET_ID);
-  // CA depuis Factures
-  let ca_f=0,ca_e=0,ca_p=0;
-  ss.getSheetByName("Factures").getDataRange().getValues().slice(2).forEach(r=>{
-    if(String(r[0])===String(annee)&&r[8]){const ht=parseFloat(r[8])||0;ca_f+=ht;if(String(r[15])==="Payé")ca_e+=ht;if(String(r[4]).toUpperCase().includes("PROFORM"))ca_p+=ht;}
+  // CA et Jours depuis Factures — colonnes détectées par en-tête ligne 2
+  const factData=ss.getSheetByName("Factures").getDataRange().getValues();
+  const factH=factData[1];
+  const ci={};factH.forEach((h,j)=>{if(h)ci[String(h)]=j;});
+  const colHT=ci["Montant HT (€)"]!==undefined?ci["Montant HT (€)"]:8;
+  const colSt=ci["Statut"]!==undefined?ci["Statut"]:15;
+  const colCl=ci["Client"]!==undefined?ci["Client"]:4;
+  const colTy=ci["Type"]!==undefined?ci["Type"]:6;
+  const colJr=ci["Jours passés"]!==undefined?ci["Jours passés"]:-1;
+  let ca_f=0,ca_e=0,ca_p=0,jours_f=0;
+  const jPT={Formation:0,Consulting:0,"Ass. Admin":0,Autre:0};
+  const jPC={},caPC={};
+  factData.slice(2).forEach(r=>{
+    if(String(r[0])!==String(annee)||!r[colHT])return;
+    const ht=parseFloat(r[colHT])||0;
+    ca_f+=ht;
+    if(String(r[colSt])==="Payé")ca_e+=ht;
+    if(String(r[colCl]).toUpperCase().includes("PROFORM"))ca_p+=ht;
+    const j=colJr>=0?parseFloat(r[colJr])||0:0;
+    jours_f+=j;
+    const ty=String(r[colTy]||'');const cl=String(r[colCl]||'');
+    if(ty.includes('Formation'))jPT.Formation+=j;
+    else if(ty.includes('Admin'))jPT['Ass. Admin']+=j;
+    else if(ty.includes('Consult'))jPT.Consulting+=j;
+    else if(j>0)jPT.Autre+=j;
+    if(cl){jPC[cl]=(jPC[cl]||0)+j;caPC[cl]=(caPC[cl]||0)+ht;}
   });
+  const JOURS_AN=228;
+  const taux_occupation=Math.round(jours_f/JOURS_AN*1000)/1000;
+  const now=new Date();
+  const jourN=Math.max(1,Math.ceil((now-new Date(now.getFullYear(),0,1))/86400000));
+  const projection_annuelle=Math.round(jours_f/jourN*365);
+  const jours_par_client=Object.keys(jPC).map(c=>({client:c,jours:Math.round(jPC[c]*10)/10,ca:Math.round(caPC[c]||0),tjm:jPC[c]>0?Math.round((caPC[c]||0)/jPC[c]):0})).sort((a,b)=>b.jours-a.jours);
   // SDIS depuis mensuel
   const sdisD=ss.getSheetByName("SDIS").getDataRange().getValues();
   let sdis_v=0,sdis_h=0;
@@ -133,7 +161,7 @@ function lireKPI(annee) {
   // Devis en attente
   let dv=0;
   try{const s=ss.getSheetByName("Devis");if(s)s.getDataRange().getValues().slice(2).forEach(r=>{if(String(r[0])===String(annee)&&String(r[10])==="En attente")dv++;});}catch(e){}
-  return{annee,ca_facture:Math.round(ca_f),ca_encaisse:Math.round(ca_e),ca_attente:Math.round(ca_f-ca_e),part_proform:ca_f>0?Math.round(ca_p/ca_f*100)/100:0,sdis:Math.round(sdis_v),sdis_heures:Math.round(sdis_h),immo_net,devis_attente:dv};
+  return{annee,ca_facture:Math.round(ca_f),ca_encaisse:Math.round(ca_e),ca_attente:Math.round(ca_f-ca_e),part_proform:ca_f>0?Math.round(ca_p/ca_f*100)/100:0,sdis:Math.round(sdis_v),sdis_heures:Math.round(sdis_h),immo_net,devis_attente:dv,jours_factures:Math.round(jours_f*10)/10,jours_par_type:jPT,jours_par_client,taux_occupation,projection_annuelle};
 }
 
 function lireOngletFiltre(nom,annee,colA) {
