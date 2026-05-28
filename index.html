@@ -172,6 +172,21 @@ tbody td strong{color:var(--text);font-weight:500}
 .khist-relance{display:flex;align-items:center;gap:6px;margin-top:2px}
 .khist-relance label{font-size:11px;color:var(--text3);white-space:nowrap}
 .khist-relance input{flex:1}
+/* MISSIONS — statuts */
+.st-mis-demande{background:rgba(255,255,255,0.08);color:var(--text3)}
+.st-mis-devis{background:rgba(79,124,255,0.15);color:var(--accent)}
+.st-mis-confirme{background:rgba(74,222,128,0.12);color:#4ade80}
+.st-mis-avenir{background:rgba(147,197,253,0.15);color:#93c5fd}
+.st-mis-encours{background:rgba(79,124,255,0.25);color:var(--accent)}
+.st-mis-termine{background:var(--gbg);color:var(--green)}
+.st-mis-annule{background:var(--rbg);color:var(--red)}
+.st-mis-abandonne{background:rgba(239,68,68,0.1);color:#fca5a5}
+/* SIDE PANEL */
+.side-panel{position:fixed;top:0;right:-440px;width:440px;height:100vh;background:var(--bg2);border-left:1px solid var(--border2);z-index:200;overflow:hidden;transition:right .25s ease;display:flex;flex-direction:column;box-shadow:-8px 0 32px rgba(0,0,0,.4)}
+.side-panel.open{right:0}
+.side-panel-header{padding:16px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;background:var(--bg2)}
+.side-panel-body{padding:18px;flex:1;overflow-y:auto}
+.ca-net-box{background:var(--bg3);border-radius:var(--rs);padding:12px;margin-bottom:14px;border:1px solid var(--border)}
 </style>
 </head>
 <body>
@@ -188,6 +203,7 @@ tbody td strong{color:var(--text);font-weight:500}
     <div class="nav-section">Facturation</div>
     <div class="nav-item" onclick="show('factures')"><i class="fa-solid fa-file-invoice"></i> Factures</div>
     <div class="nav-item" onclick="show('devis')"><i class="fa-solid fa-file-contract"></i> Devis</div>
+    <div class="nav-item" onclick="show('missions')"><i class="fa-solid fa-briefcase"></i> Missions</div>
     <div class="nav-item" onclick="show('depenses')"><i class="fa-solid fa-receipt"></i> Dépenses</div>
     <div class="nav-item" onclick="show('nouveau-doc')"><i class="fa-solid fa-file-plus"></i> Nouveau document</div>
     <div class="nav-section">Revenus annexes</div>
@@ -293,6 +309,27 @@ tbody td strong{color:var(--text);font-weight:500}
       </div>
     </div>
 
+    <!-- MISSIONS -->
+    <div id="screen-missions" class="screen">
+      <div class="kpi-grid" id="kpiMis"></div>
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap">
+        <div style="display:flex;gap:6px">
+          <button class="btn btn-primary btn-sm" id="btnVueListe" onclick="switchVueMissions('liste')"><i class="fa-solid fa-list"></i> Vue liste</button>
+          <button class="btn btn-ghost btn-sm" id="btnVueProj" onclick="switchVueMissions('projection')"><i class="fa-solid fa-chart-bar"></i> Projection</button>
+        </div>
+        <select class="fs" style="width:130px" id="filterMisType" onchange="filtrerMissions()"><option value="">Tous types</option><option>Formation</option><option>Consulting</option><option>Assistance</option><option>Audit</option><option>Autre</option></select>
+        <select class="fs" style="width:148px" id="filterMisStatut" onchange="filtrerMissions()"><option value="">Tous statuts</option><option>Demande</option><option>Devis envoyé</option><option>Confirmé</option><option>À venir</option><option>En cours</option><option>Terminé</option><option>Annulé</option><option>Abandonné</option></select>
+        <select class="fs" style="width:160px" id="filterMisClient" onchange="filtrerMissions()"><option value="">Tous clients</option></select>
+      </div>
+      <div id="vueListeMissions">
+        <div class="card"><div class="tw"><table><thead><tr><th>ID</th><th>Client</th><th>Type</th><th>Nom mission</th><th>Dates</th><th class="tn">Jours</th><th class="tn">Forfait HT</th><th>Statut</th><th>Actions</th></tr></thead><tbody id="tbMissions"></tbody></table></div></div>
+      </div>
+      <div id="vueProjMissions" style="display:none">
+        <div class="card"><div class="card-header"><div class="card-title">CA missions par mois — Prévu vs Réalisé</div></div><div class="card-body"><div class="chart-wrap" style="height:220px"><canvas id="chartMissions" role="img" aria-label="Missions">Missions</canvas></div></div></div>
+        <div class="card"><div class="card-header"><div class="card-title">Projection mensuelle</div></div><div class="tw"><table><thead><tr><th>Mois</th><th class="tn">Jours prévus</th><th class="tn">CA prévu / réalisé</th><th class="tn">Taux occupation</th></tr></thead><tbody id="tbProjMis"></tbody></table></div></div>
+      </div>
+    </div>
+
     <!-- DÉPENSES -->
     <div id="screen-depenses" class="screen">
       <div class="card"><div class="card-header"><div class="card-title">Dépenses</div></div>
@@ -382,6 +419,43 @@ tbody td strong{color:var(--text);font-weight:500}
 
   </div>
 </main>
+
+<!-- Side Panel Mission -->
+<div id="sidePanelMission" class="side-panel">
+  <div class="side-panel-header">
+    <div><div style="font-size:14px;font-weight:600" id="spMisTitle">Détail mission</div><div style="font-size:11px;color:var(--text3);margin-top:2px" id="spMisId"></div></div>
+    <button class="btn btn-ghost btn-sm" onclick="fermerSidePanel()"><i class="fa-solid fa-times"></i></button>
+  </div>
+  <div class="side-panel-body">
+    <div class="fg"><label class="fl">Client</label><input class="fi" id="spClient"></div>
+    <div class="fr"><div class="fg"><label class="fl">Type</label><select class="fs" id="spType"><option>Formation</option><option>Consulting</option><option>Assistance</option><option>Audit</option><option>Autre</option></select></div><div class="fg"><label class="fl">Statut</label><select class="fs" id="spStatut"><option>Demande</option><option>Devis envoyé</option><option>Confirmé</option><option>À venir</option><option>En cours</option><option>Terminé</option><option>Annulé</option><option>Abandonné</option></select></div></div>
+    <div class="fg"><label class="fl">Nom mission</label><input class="fi" id="spNomMis"></div>
+    <div class="fr"><div class="fg"><label class="fl">Date début</label><input class="fi" type="date" id="spDateDebut"></div><div class="fg"><label class="fl">Date fin</label><input class="fi" type="date" id="spDateFin"></div></div>
+    <div class="fr"><div class="fg"><label class="fl">Jours</label><input class="fi" type="number" id="spJours" step="0.5" min="0"></div><div class="fg"><label class="fl">Lieu</label><input class="fi" id="spLieu"></div></div>
+    <div class="fg"><label class="fl">Horaires</label><input class="fi" id="spHoraires" placeholder="9h–17h"></div>
+    <div class="ca-net-box">
+      <div style="font-size:11px;font-weight:600;color:var(--text2);margin-bottom:10px">Frais mission</div>
+      <div class="fr"><div class="fg"><label class="fl">Forfait HT (€)</label><input class="fi" type="number" id="spForfait" step="0.01" oninput="updateCaNetDisplay()"></div><div class="fg"><label class="fl">Frais mission (€)</label><input class="fi" type="number" id="spFrais" step="0.01" oninput="updateCaNetDisplay()"></div></div>
+      <div style="display:flex;align-items:center;justify-content:space-between;padding-top:8px;border-top:1px solid var(--border);margin-top:4px"><span style="font-size:12px;color:var(--text2)">CA net frais</span><span style="font-size:16px;font-weight:700;color:var(--green)" id="spCaNet">0 €</span></div>
+    </div>
+    <div style="font-size:11px;font-weight:600;color:var(--text2);margin-bottom:8px">Liens</div>
+    <div class="fr"><div class="fg"><label class="fl">Lier un devis</label><select class="fs" id="spNumDevis"><option value="">— Aucun —</option></select></div><div class="fg"><label class="fl">Lier une facture</label><select class="fs" id="spNumFacture"><option value="">— Aucune —</option></select></div></div>
+    <div style="display:flex;gap:8px;margin-bottom:18px;flex-wrap:wrap">
+      <button class="btn btn-primary" style="flex:1;min-width:120px" onclick="saveMission()"><i class="fa-solid fa-floppy-disk"></i> Enregistrer</button>
+      <button class="btn btn-ghost" id="spBtnCalendar" onclick="ajouterCalendrierCurrent()" style="flex:1;min-width:120px"><i class="fa-solid fa-calendar-plus"></i> Ajouter au calendrier</button>
+    </div>
+    <div style="border-top:1px solid var(--border);padding-top:14px">
+      <div style="font-size:11px;font-weight:600;color:var(--text2);margin-bottom:8px">Historique commentaires</div>
+      <div id="spComments" style="margin-bottom:12px;max-height:160px;overflow-y:auto;font-size:12px"></div>
+      <div class="fr" style="margin-bottom:8px;align-items:flex-end">
+        <div class="fg" style="flex:0 0 100px;margin-bottom:0"><select class="fs" id="spComType"><option>Note</option><option>Appel</option><option>Mail</option><option>RDV</option></select></div>
+        <div class="fg" style="flex:1;margin-bottom:0"><input class="fi" id="spComNote" placeholder="Commentaire…"></div>
+      </div>
+      <button class="btn btn-ghost btn-sm" onclick="ajouterCommentaireMission()" style="width:100%"><i class="fa-solid fa-plus"></i> Ajouter</button>
+    </div>
+  </div>
+</div>
+<div id="spOverlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:199" onclick="fermerSidePanel()"></div>
 
 <div id="toast"></div>
 
@@ -538,7 +612,8 @@ function ouvrirConfig(premier=false){
   ouvrir('mConfig');
 }
 let ANNEE=2026;
-let DATA={kpi:null,factures:[],devis:[],clients:[],prospects:[],depenses:[],sdis:null,immo:null,locataires:[],historique:null,firetraining:null};
+let DATA={kpi:null,factures:[],devis:[],clients:[],prospects:[],depenses:[],sdis:null,immo:null,locataires:[],historique:null,firetraining:null,missions:[]};
+let allMissions=[],filteredMissions=[],chartMissions=null,currentMission=null;
 let allFact=[],allDevis=[],allProsp=[];
 let docType='devis',docLignes=[],docNumActuel='',chartCA=null,chartMix=null,chartHist=null,chartJours=null;
 const CLIENTS_LISTE=[
@@ -575,6 +650,7 @@ const PAGES={
   'prospects':{title:'Prospects',sub:()=>`Pipeline ${ANNEE}`,action:loadProspects,btn:'<button class="btn btn-primary btn-sm" onclick="ouvrir(\'mProspect\')"><i class="fa-solid fa-plus"></i> Nouveau prospect</button>'},
   'factures':{title:'Factures',sub:()=>`Registre ${ANNEE}`,action:loadFactures,btn:'<button class="btn btn-primary btn-sm" onclick="show(\'nouveau-doc\')"><i class="fa-solid fa-plus"></i> Nouvelle facture</button>'},
   'devis':{title:'Devis',sub:()=>`Registre ${ANNEE}`,action:loadDevis,btn:'<button class="btn btn-primary btn-sm" onclick="show(\'nouveau-doc\')"><i class="fa-solid fa-plus"></i> Nouveau devis</button>'},
+  'missions':{title:'Missions',sub:()=>`Suivi missions ${ANNEE}`,action:loadMissions,btn:'<button class="btn btn-primary btn-sm" onclick="ouvrirNouveauMission()"><i class="fa-solid fa-plus"></i> Nouvelle mission</button>'},
   'depenses':{title:'Dépenses',sub:()=>`Année ${ANNEE}`,action:loadDepenses,btn:'<button class="btn btn-primary btn-sm" onclick="ouvrirDepense()"><i class="fa-solid fa-plus"></i> Ajouter</button>'},
   'nouveau-doc':{title:'Nouveau document',sub:()=>'Devis · Facture · Quittance',action:initNouveauDoc},
   'sdis':{title:'SDIS 77',sub:()=>'Sapeur-Pompier Volontaire',action:loadSDIS},
@@ -591,7 +667,7 @@ function show(id){
   const p=PAGES[id];
   if(p){document.getElementById('pageTitle').textContent=p.title;document.getElementById('pageSubtitle').textContent=p.sub();document.getElementById('topbarActions').innerHTML=p.btn||'';if(p.action)p.action();}
 }
-function changerAnnee(v){ANNEE=parseInt(v);DATA.factures=[];DATA.devis=[];DATA.kpi=null;DATA.depenses=[];const s=curScreen();if(PAGES[s]?.action)PAGES[s].action();}
+function changerAnnee(v){ANNEE=parseInt(v);DATA.factures=[];DATA.devis=[];DATA.kpi=null;DATA.depenses=[];DATA.missions=[];allMissions=[];filteredMissions=[];const s=curScreen();if(PAGES[s]?.action)PAGES[s].action();}
 function curScreen(){const a=document.querySelector('.screen.active');return a?a.id.replace('screen-',''):'dashboard';}
 function ouvrir(id){document.getElementById(id).classList.add('open');}
 function fermer(id){document.getElementById(id).classList.remove('open');}
@@ -603,7 +679,8 @@ function toggleAccordeon(id){
 // ── Sync ──────────────────────────────────────────────
 async function syncAll(){
   const btn=document.getElementById('syncBtn');btn.classList.add('loading');
-  DATA={kpi:null,factures:[],devis:[],clients:[],prospects:[],depenses:[],sdis:null,immo:null,locataires:[],historique:null,firetraining:null};
+  DATA={kpi:null,factures:[],devis:[],clients:[],prospects:[],depenses:[],sdis:null,immo:null,locataires:[],historique:null,firetraining:null,missions:[]};
+  allMissions=[];filteredMissions=[];
   try{
     DATA.kpi=await api('lire_kpi',{annee:ANNEE});
     DATA.historique=await api('lire_historique');
@@ -640,7 +717,8 @@ function renderKPI(){
     ${(d.projection_annuelle||0)>0?`<div class="kpi-card" style="--ac:var(--accent2)"><div class="kpi-label">Projection annuelle</div><div class="kpi-value">${d.projection_annuelle} j</div><div class="kpi-sub">au rythme actuel</div></div>`:''}
     <div class="kpi-card" style="--ac:var(--accent2)"><div class="kpi-label">SDIS 77</div><div class="kpi-value">${fmt(d.sdis||0)} €</div><div class="kpi-sub">${Math.round(d.sdis_heures||0)} h · ${ratio_h24} gardes/24h · ${fmt(eur_garde)} €/garde</div></div>
     <div class="kpi-card" style="--ac:var(--teal)"><div class="kpi-label">Immo net</div><div class="kpi-value">${d.immo_net>=0?fmt(d.immo_net):'-'+fmt(Math.abs(d.immo_net))} €</div><div class="kpi-sub">Bien Trilport</div></div>
-    ${(d.devis_attente||0)>0?`<div class="kpi-card" style="--ac:var(--amber)"><div class="kpi-label">Devis en attente</div><div class="kpi-value">${d.devis_attente}</div><span class="badge b-warn">Sans réponse</span></div>`:''}`;
+    ${(d.devis_attente||0)>0?`<div class="kpi-card" style="--ac:var(--amber)"><div class="kpi-label">Devis en attente</div><div class="kpi-value">${d.devis_attente}</div><span class="badge b-warn">Sans réponse</span></div>`:''}
+    ${'total_frais_missions' in d?`<div class="kpi-card" style="--ac:var(--teal)"><div class="kpi-label">CA net de frais</div><div class="kpi-value">${fmt((d.ca_facture||0)-(d.total_frais_missions||0))} €</div><div class="kpi-sub">Frais mission : ${fmt(d.total_frais_missions||0)} €</div></div><div class="kpi-card" style="--ac:var(--accent2)"><div class="kpi-label">Revenu net estimé</div><div class="kpi-value">${fmt(Math.round(((d.ca_facture||0)-(d.total_frais_missions||0))*0.758))} €</div><div class="kpi-sub">Après URSSAF 24,2%</div></div>`:''}`;
 }
 
 function renderFAtt(){
@@ -1117,6 +1195,256 @@ async function saveFire(){
   if(!v.client){toast('Client obligatoire','error');return;}
   const r=await api('ajouter_vente_firetraining',{vente:v});
   if(r.succes){toast('Vente enregistrée ✓ — '+r.numero,'success');fermer('mFire');loadFiretraining();}else toast('Erreur','error');
+}
+
+// ── MISSIONS ──────────────────────────────────────────
+async function loadMissions(){
+  document.getElementById('kpiMis').innerHTML='<div class="loader"><i class="fa-solid fa-rotate"></i> Chargement...</div>';
+  const r=await api('lire_missions',{annee:ANNEE});
+  allMissions=r.missions||[];DATA.missions=allMissions;
+  renderKPIMissions(allMissions);
+  // Populate client filter
+  const clients=[...new Set(allMissions.map(m=>m['Client']).filter(Boolean))].sort();
+  const cSel=document.getElementById('filterMisClient');
+  if(cSel)cSel.innerHTML='<option value="">Tous clients</option>'+clients.map(c=>`<option>${c}</option>`).join('');
+  // Populate devis/facture selects in side panel
+  if(!DATA.devis.length){const dr=await api('lire_devis',{annee:ANNEE});DATA.devis=dr.devis||[];}
+  if(!DATA.factures.length){const fr=await api('lire_factures',{annee:ANNEE});DATA.factures=fr.factures||[];}
+  populateDevisFactureOptions();
+  filtrerMissions();
+}
+
+function populateDevisFactureOptions(){
+  const dSel=document.getElementById('spNumDevis');
+  const fSel=document.getElementById('spNumFacture');
+  if(dSel)dSel.innerHTML='<option value="">— Aucun —</option>'+(DATA.devis||[]).map(d=>`<option value="${d['N° Devis']||''}">${d['N° Devis']||''} — ${d['Client']||''}</option>`).join('');
+  if(fSel)fSel.innerHTML='<option value="">— Aucune —</option>'+(DATA.factures||[]).map(f=>`<option value="${f['N° Facture']||''}">${f['N° Facture']||''} — ${f['Client']||''}</option>`).join('');
+}
+
+function renderKPIMissions(list){
+  const total=list.length;
+  const ca_prevu=list.filter(m=>['Confirmé','À venir','En cours','Terminé'].includes(m['Statut'])).reduce((s,m)=>s+(parseFloat(m['Forfait HT (€)'])||0),0);
+  const ca_net=list.reduce((s,m)=>s+(parseFloat(m['CA net frais (€)'])||0),0);
+  const total_frais=list.reduce((s,m)=>s+(parseFloat(m['Frais mission (€)'])||0),0);
+  const annules=list.filter(m=>m['Statut']==='Annulé');
+  const ca_annule=annules.reduce((s,m)=>s+(parseFloat(m['Forfait HT (€)'])||0),0);
+  document.getElementById('kpiMis').innerHTML=`
+    <div class="kpi-card" style="--ac:var(--accent)"><div class="kpi-label">Total missions</div><div class="kpi-value">${total}</div><div class="kpi-sub">${ANNEE}</div></div>
+    <div class="kpi-card" style="--ac:var(--green)"><div class="kpi-label">CA prévu</div><div class="kpi-value">${fmt(ca_prevu)} €</div><div class="kpi-sub">Confirmé + En cours + Terminé</div></div>
+    <div class="kpi-card" style="--ac:var(--teal)"><div class="kpi-label">CA net frais</div><div class="kpi-value">${fmt(ca_net)} €</div></div>
+    <div class="kpi-card" style="--ac:var(--amber)"><div class="kpi-label">Frais de mission</div><div class="kpi-value">${fmt(total_frais)} €</div></div>
+    <div class="kpi-card" style="--ac:var(--red)"><div class="kpi-label">Missions annulées</div><div class="kpi-value">${annules.length}</div><div class="kpi-sub">${fmt(ca_annule)} €</div></div>`;
+}
+
+function missionStatutClass(s){
+  return{'Demande':'st-mis-demande','Devis envoyé':'st-mis-devis','Confirmé':'st-mis-confirme','À venir':'st-mis-avenir','En cours':'st-mis-encours','Terminé':'st-mis-termine','Annulé':'st-mis-annule','Abandonné':'st-mis-abandonne'}[s]||'';
+}
+
+function filtrerMissions(){
+  const type=document.getElementById('filterMisType')?.value||'';
+  const statut=document.getElementById('filterMisStatut')?.value||'';
+  const client=document.getElementById('filterMisClient')?.value||'';
+  filteredMissions=allMissions.filter(m=>{
+    if(type&&m['Type']!==type)return false;
+    if(statut&&m['Statut']!==statut)return false;
+    if(client&&m['Client']!==client)return false;
+    return true;
+  });
+  renderTableMissions(filteredMissions);
+}
+
+function renderTableMissions(list){
+  const tb=document.getElementById('tbMissions');
+  if(!tb)return;
+  tb.innerHTML=list.length?list.map(m=>`<tr style="cursor:pointer" onclick="ouvrirFicheMission(${m._ligne})">
+    <td><strong>${m['ID']||''}</strong></td>
+    <td>${m['Client']||''}</td>
+    <td><span class="badge b-info" style="font-size:10px">${m['Type']||''}</span></td>
+    <td>${m['Nom mission']||''}</td>
+    <td style="font-size:11px;white-space:nowrap">${fmtDate(m['Date début'])||'—'}${m['Date fin']?' → '+fmtDate(m['Date fin']):''}</td>
+    <td class="tn">${parseFloat(m['Jours']||0).toFixed(1)}</td>
+    <td class="tn"><strong>${fmt(m['Forfait HT (€)']||0)} €</strong></td>
+    <td><span class="st ${missionStatutClass(m['Statut'])}">${m['Statut']||''}</span></td>
+    <td onclick="event.stopPropagation()" style="white-space:nowrap">
+      <button class="btn btn-ghost btn-sm" onclick="ouvrirFicheMission(${m._ligne})" title="Ouvrir fiche"><i class="fa-solid fa-pen"></i></button>
+      ${m['Ajouté au calendrier']!=='Oui'?`<button class="btn btn-ghost btn-sm" onclick="ajouterCalendrier(${m._ligne})" title="Ajouter au calendrier"><i class="fa-solid fa-calendar-plus"></i></button>`:'<span style="font-size:11px;color:var(--text3);padding:0 6px"><i class="fa-solid fa-calendar-check"></i></span>'}
+    </td>
+  </tr>`).join(''):'<tr><td colspan="9"><div class="empty"><i class="fa-solid fa-briefcase"></i><p>Aucune mission pour '+(document.getElementById('filterMisStatut')?.value||ANNEE)+'</p></div></td></tr>';
+}
+
+function switchVueMissions(vue){
+  const isListe=vue==='liste';
+  document.getElementById('vueListeMissions').style.display=isListe?'':'none';
+  document.getElementById('vueProjMissions').style.display=isListe?'none':'';
+  document.getElementById('btnVueListe').className=isListe?'btn btn-primary btn-sm':'btn btn-ghost btn-sm';
+  document.getElementById('btnVueProj').className=isListe?'btn btn-ghost btn-sm':'btn btn-primary btn-sm';
+  if(!isListe)renderProjectionMissions();
+}
+
+function renderProjectionMissions(){
+  const mois=['Jan','Fév','Mar','Avr','Mai','Jun','Jul','Aoû','Sep','Oct','Nov','Déc'];
+  const caPrevu=Array(12).fill(0),caRealise=Array(12).fill(0),joursPrevu=Array(12).fill(0);
+  allMissions.forEach(m=>{
+    let mIdx=-1;
+    const ds=m['Date début'];
+    if(ds){
+      let d;
+      if(typeof ds==='string'&&ds.match(/^\d{4}-\d{2}-\d{2}$/))d=new Date(ds);
+      else if(typeof ds==='string'&&ds.includes('/')){const p=ds.split('/');d=new Date(parseInt(p[2]),parseInt(p[1])-1,parseInt(p[0]));}
+      else d=new Date(ds);
+      if(!isNaN(d))mIdx=d.getMonth();
+    }
+    if(mIdx<0)return;
+    const forfait=parseFloat(m['Forfait HT (€)'])||0;
+    const jours=parseFloat(m['Jours'])||0;
+    const st=m['Statut'];
+    if(['Confirmé','À venir','En cours'].includes(st)){caPrevu[mIdx]+=forfait;joursPrevu[mIdx]+=jours;}
+    else if(st==='Terminé'){caRealise[mIdx]+=forfait;joursPrevu[mIdx]+=jours;}
+  });
+  if(chartMissions)chartMissions.destroy();
+  chartMissions=new Chart(document.getElementById('chartMissions'),{type:'bar',data:{labels:mois,datasets:[{label:'CA prévu',data:caPrevu.map(v=>Math.round(v)),backgroundColor:'rgba(79,124,255,0.65)',borderRadius:4},{label:'CA réalisé',data:caRealise.map(v=>Math.round(v)),backgroundColor:'rgba(34,197,94,0.65)',borderRadius:4}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:'#8b92a8',font:{size:11}}}},scales:{x:{grid:{color:'rgba(255,255,255,0.05)'},ticks:{color:'#8b92a8',font:{size:11}}},y:{grid:{color:'rgba(255,255,255,0.05)'},ticks:{color:'#8b92a8',font:{size:11},callback:v=>v.toLocaleString('fr-FR')+' €'}}}}});
+  const JOURS_MOIS=19;
+  document.getElementById('tbProjMis').innerHTML=mois.map((m,i)=>{
+    const totalCA=caPrevu[i]+caRealise[i];
+    const taux=joursPrevu[i]>0?Math.round(joursPrevu[i]/JOURS_MOIS*100):0;
+    const tauxBadge=taux===0?'':(taux<80?'b-ok':taux<=100?'b-warn':'b-danger');
+    return`<tr><td><strong>${m}</strong></td><td class="tn">${joursPrevu[i].toFixed(1)}</td><td class="tn"><strong>${fmt(totalCA)} €</strong></td><td class="tn"><span class="badge ${tauxBadge}">${taux}%</span></td></tr>`;
+  }).join('');
+}
+
+// ── Side Panel helpers ───────────────────────────────
+function ouvrirNouveauMission(){
+  currentMission=null;
+  document.getElementById('spMisTitle').textContent='Nouvelle mission';
+  document.getElementById('spMisId').textContent='';
+  resetSidePanelMission();
+  ouvrirSidePanel();
+}
+
+function ouvrirFicheMission(ligne){
+  const m=allMissions.find(x=>x._ligne===ligne);
+  if(!m)return;
+  currentMission=m;
+  document.getElementById('spMisTitle').textContent=m['Nom mission']||'Mission';
+  document.getElementById('spMisId').textContent=m['ID']||'';
+  document.getElementById('spClient').value=m['Client']||'';
+  document.getElementById('spType').value=m['Type']||'Formation';
+  document.getElementById('spNomMis').value=m['Nom mission']||'';
+  const toDateInput=s=>{
+    if(!s)return'';
+    if(typeof s==='string'&&s.match(/^\d{4}-\d{2}-\d{2}$/))return s;
+    if(typeof s==='string'&&s.includes('/')){const p=s.split('/');return p.length===3?p[2]+'-'+p[1].padStart(2,'0')+'-'+p[0].padStart(2,'0'):'';}
+    try{return new Date(s).toISOString().split('T')[0];}catch(e){return'';}
+  };
+  document.getElementById('spDateDebut').value=toDateInput(m['Date début']);
+  document.getElementById('spDateFin').value=toDateInput(m['Date fin']);
+  document.getElementById('spJours').value=m['Jours']||0;
+  document.getElementById('spForfait').value=m['Forfait HT (€)']||0;
+  document.getElementById('spFrais').value=m['Frais mission (€)']||0;
+  document.getElementById('spLieu').value=m['Lieu']||'';
+  document.getElementById('spHoraires').value=m['Horaires']||'';
+  document.getElementById('spStatut').value=m['Statut']||'Demande';
+  // Devis/facture selects
+  const dSel=document.getElementById('spNumDevis');
+  if(dSel)dSel.value=m['N° Devis lié']||'';
+  const fSel=document.getElementById('spNumFacture');
+  if(fSel)fSel.value=m['N° Facture liée']||'';
+  updateCaNetDisplay();
+  const calBtn=document.getElementById('spBtnCalendar');
+  if(m['Ajouté au calendrier']==='Oui'){calBtn.innerHTML='<i class="fa-solid fa-calendar-check"></i> Ajouté au calendrier';calBtn.disabled=true;}
+  else{calBtn.innerHTML='<i class="fa-solid fa-calendar-plus"></i> Ajouter au calendrier';calBtn.disabled=false;}
+  renderCommentairesMission(m);
+  ouvrirSidePanel();
+}
+
+function renderCommentairesMission(m){
+  let hist=[];
+  try{hist=JSON.parse(m['Commentaires JSON']||'[]');}catch(e){}
+  document.getElementById('spComments').innerHTML=hist.length?
+    hist.slice().reverse().map(c=>`<div style="padding:5px 0;border-bottom:1px solid var(--border)"><span style="color:var(--text3)">${c.date||''}</span> · <strong>${c.type||''}</strong>${c.note?' — '+c.note:''}</div>`).join(''):
+    '<div style="color:var(--text3)">Aucun commentaire</div>';
+}
+
+function updateCaNetDisplay(){
+  const f=parseFloat(document.getElementById('spForfait')?.value)||0;
+  const fr=parseFloat(document.getElementById('spFrais')?.value)||0;
+  const el=document.getElementById('spCaNet');
+  if(el)el.textContent=fmt(f-fr)+' €';
+}
+
+function resetSidePanelMission(){
+  ['spClient','spNomMis','spLieu','spHoraires'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('spType').value='Formation';
+  document.getElementById('spStatut').value='Demande';
+  document.getElementById('spDateDebut').value='';
+  document.getElementById('spDateFin').value='';
+  document.getElementById('spJours').value=0;
+  document.getElementById('spForfait').value=0;
+  document.getElementById('spFrais').value=0;
+  const dSel=document.getElementById('spNumDevis');if(dSel)dSel.value='';
+  const fSel=document.getElementById('spNumFacture');if(fSel)fSel.value='';
+  const calBtn=document.getElementById('spBtnCalendar');
+  if(calBtn){calBtn.innerHTML='<i class="fa-solid fa-calendar-plus"></i> Ajouter au calendrier';calBtn.disabled=false;}
+  document.getElementById('spComments').innerHTML='<div style="color:var(--text3)">Aucun commentaire</div>';
+  document.getElementById('spCaNet').textContent='0 €';
+}
+
+function ouvrirSidePanel(){document.getElementById('sidePanelMission').classList.add('open');document.getElementById('spOverlay').style.display='';}
+function fermerSidePanel(){document.getElementById('sidePanelMission').classList.remove('open');document.getElementById('spOverlay').style.display='none';currentMission=null;}
+
+async function saveMission(){
+  const mission={
+    annee:ANNEE,
+    client:document.getElementById('spClient').value,
+    type:document.getElementById('spType').value,
+    nom_mission:document.getElementById('spNomMis').value,
+    date_debut:document.getElementById('spDateDebut').value,
+    date_fin:document.getElementById('spDateFin').value,
+    jours:document.getElementById('spJours').value,
+    forfait_ht:document.getElementById('spForfait').value,
+    frais_mission:document.getElementById('spFrais').value,
+    lieu:document.getElementById('spLieu').value,
+    horaires:document.getElementById('spHoraires').value,
+    statut:document.getElementById('spStatut').value,
+    num_devis:document.getElementById('spNumDevis')?.value||'',
+    num_facture:document.getElementById('spNumFacture')?.value||''
+  };
+  if(!mission.nom_mission){toast('Nom mission obligatoire','error');return;}
+  let r;
+  if(currentMission&&currentMission._ligne){r=await api('modifier_mission',{ligne:currentMission._ligne,mission});}
+  else{r=await api('ajouter_mission',{mission});}
+  if(r.succes){
+    toast(currentMission?'Mission mise à jour ✓':'Mission ajoutée ✓ — '+(r.id||''),'success');
+    fermerSidePanel();DATA.missions=[];allMissions=[];DATA.kpi=null;loadMissions();
+  }else toast('Erreur : '+(r.erreur||''),'error');
+}
+
+async function ajouterCalendrier(ligne){
+  const r=await api('ajouter_au_calendrier',{ligne});
+  if(r.succes){toast('Événement ajouté au calendrier Google ✓','success');DATA.missions=[];allMissions=[];loadMissions();}
+  else toast('Erreur : '+(r.erreur||''),'error');
+}
+
+function ajouterCalendrierCurrent(){
+  if(currentMission&&currentMission._ligne)ajouterCalendrier(currentMission._ligne);
+  else toast('Sauvegardez la mission d\'abord','error');
+}
+
+async function ajouterCommentaireMission(){
+  if(!currentMission||!currentMission._ligne){toast('Sauvegardez la mission d\'abord','error');return;}
+  const type=document.getElementById('spComType').value;
+  const note=document.getElementById('spComNote').value.trim();
+  if(!note){toast('Commentaire vide','error');return;}
+  const commentaire=JSON.stringify({type,note});
+  const r=await api('ajouter_commentaire_mission',{ligne:currentMission._ligne,commentaire});
+  if(r.succes){
+    toast('Commentaire ajouté ✓','success');
+    document.getElementById('spComNote').value='';
+    const reloadR=await api('lire_missions',{annee:ANNEE});
+    allMissions=reloadR.missions||[];DATA.missions=allMissions;
+    const updated=allMissions.find(m=>m._ligne===currentMission._ligne);
+    if(updated){currentMission=updated;renderCommentairesMission(updated);}
+  }else toast('Erreur : '+(r.erreur||''),'error');
 }
 
 // ── NOUVEAU DOCUMENT ──────────────────────────────────
