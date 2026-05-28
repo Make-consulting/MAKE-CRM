@@ -196,6 +196,7 @@ tbody td strong{color:var(--text);font-weight:500}
   <nav class="sidebar-nav">
     <div class="nav-section">Vue d'ensemble</div>
     <div class="nav-item active" onclick="show('dashboard')"><i class="fa-solid fa-chart-line"></i> Dashboard</div>
+    <div class="nav-item" onclick="show('missions')"><i class="fa-solid fa-briefcase"></i> Missions</div>
     <div class="nav-item" onclick="show('historique')"><i class="fa-solid fa-clock-rotate-left"></i> Historique CA</div>
     <div class="nav-section">Commercial</div>
     <div class="nav-item" onclick="show('clients')"><i class="fa-solid fa-building"></i> Clients</div>
@@ -203,7 +204,6 @@ tbody td strong{color:var(--text);font-weight:500}
     <div class="nav-section">Facturation</div>
     <div class="nav-item" onclick="show('factures')"><i class="fa-solid fa-file-invoice"></i> Factures</div>
     <div class="nav-item" onclick="show('devis')"><i class="fa-solid fa-file-contract"></i> Devis</div>
-    <div class="nav-item" onclick="show('missions')"><i class="fa-solid fa-briefcase"></i> Missions</div>
     <div class="nav-item" onclick="show('depenses')"><i class="fa-solid fa-receipt"></i> Dépenses</div>
     <div class="nav-item" onclick="show('nouveau-doc')"><i class="fa-solid fa-file-plus"></i> Nouveau document</div>
     <div class="nav-section">Revenus annexes</div>
@@ -427,7 +427,7 @@ tbody td strong{color:var(--text);font-weight:500}
     <button class="btn btn-ghost btn-sm" onclick="fermerSidePanel()"><i class="fa-solid fa-times"></i></button>
   </div>
   <div class="side-panel-body">
-    <div class="fg"><label class="fl">Client</label><input class="fi" id="spClient"></div>
+    <div class="fg"><label class="fl">Client</label><select class="fs" id="spClient" onchange="onSelectClientMission()"><option value="">— Sélectionner —</option></select><input type="hidden" id="spClientId"></div>
     <div class="fr"><div class="fg"><label class="fl">Type</label><select class="fs" id="spType"><option>Formation</option><option>Consulting</option><option>Assistance</option><option>Audit</option><option>Autre</option></select></div><div class="fg"><label class="fl">Statut</label><select class="fs" id="spStatut"><option>Demande</option><option>Devis envoyé</option><option>Confirmé</option><option>À venir</option><option>En cours</option><option>Terminé</option><option>Annulé</option><option>Abandonné</option></select></div></div>
     <div class="fg"><label class="fl">Nom mission</label><input class="fi" id="spNomMis"></div>
     <div class="fr"><div class="fg"><label class="fl">Date début</label><input class="fi" type="date" id="spDateDebut"></div><div class="fg"><label class="fl">Date fin</label><input class="fi" type="date" id="spDateFin"></div></div>
@@ -1211,6 +1211,7 @@ async function loadMissions(){
   if(!DATA.devis.length){const dr=await api('lire_devis',{annee:ANNEE});DATA.devis=dr.devis||[];}
   if(!DATA.factures.length){const fr=await api('lire_factures',{annee:ANNEE});DATA.factures=fr.factures||[];}
   populateDevisFactureOptions();
+  await populateClientSelect();
   filtrerMissions();
 }
 
@@ -1219,6 +1220,56 @@ function populateDevisFactureOptions(){
   const fSel=document.getElementById('spNumFacture');
   if(dSel)dSel.innerHTML='<option value="">— Aucun —</option>'+(DATA.devis||[]).map(d=>`<option value="${d['N° Devis']||''}">${d['N° Devis']||''} — ${d['Client']||''}</option>`).join('');
   if(fSel)fSel.innerHTML='<option value="">— Aucune —</option>'+(DATA.factures||[]).map(f=>`<option value="${f['N° Facture']||''}">${f['N° Facture']||''} — ${f['Client']||''}</option>`).join('');
+}
+
+async function populateClientSelect(selectedNom){
+  // Charge clients et prospects si nécessaire
+  if(!DATA.clients.length){const r=await api('lire_clients');DATA.clients=r.clients||[];}
+  if(!DATA.prospects.length){const r=await api('lire_prospects',{annee:ANNEE});DATA.prospects=r.prospects||[];}
+  const sel=document.getElementById('spClient');
+  if(!sel)return;
+  const clients=DATA.clients;
+  const prospects=DATA.prospects.filter(p=>p['Statut']!=='Abandonné');
+  // Sérialise les données dans la value : JSON {nom, id}
+  let html='<option value="">— Sélectionner —</option>';
+  if(clients.length){
+    html+='<optgroup label="Clients">';
+    html+=clients.map(c=>{
+      const nom=c['Entreprise']||'';
+      const id=c['ID']||c['ID Client']||'';
+      return`<option value="${encodeURIComponent(JSON.stringify({nom,id}))}">${nom}</option>`;
+    }).join('');
+    html+='</optgroup>';
+  }
+  if(prospects.length){
+    html+='<optgroup label="Prospects">';
+    html+=prospects.map(p=>{
+      const nom=p['Entreprise']||'';
+      const id=p['ID']||p['ID Prospect']||'';
+      return`<option value="${encodeURIComponent(JSON.stringify({nom,id}))}">${nom}</option>`;
+    }).join('');
+    html+='</optgroup>';
+  }
+  sel.innerHTML=html;
+  // Sélectionner la valeur courante si fournie
+  if(selectedNom){
+    for(const opt of sel.options){
+      if(!opt.value)continue;
+      try{const d=JSON.parse(decodeURIComponent(opt.value));if(d.nom===selectedNom){sel.value=opt.value;break;}}catch(e){}
+    }
+  }
+  // Sync le hidden ID
+  onSelectClientMission();
+}
+
+function onSelectClientMission(){
+  const sel=document.getElementById('spClient');
+  const hiddenId=document.getElementById('spClientId');
+  if(!sel||!hiddenId)return;
+  try{
+    const d=JSON.parse(decodeURIComponent(sel.value||''));
+    hiddenId.value=d.id||'';
+  }catch(e){hiddenId.value='';}
 }
 
 function renderKPIMissions(list){
@@ -1313,21 +1364,22 @@ function renderProjectionMissions(){
 }
 
 // ── Side Panel helpers ───────────────────────────────
-function ouvrirNouveauMission(){
+async function ouvrirNouveauMission(){
   currentMission=null;
   document.getElementById('spMisTitle').textContent='Nouvelle mission';
   document.getElementById('spMisId').textContent='';
   resetSidePanelMission();
+  await populateClientSelect();
   ouvrirSidePanel();
 }
 
-function ouvrirFicheMission(ligne){
+async function ouvrirFicheMission(ligne){
   const m=allMissions.find(x=>x._ligne===ligne);
   if(!m)return;
   currentMission=m;
   document.getElementById('spMisTitle').textContent=m['Nom mission']||'Mission';
   document.getElementById('spMisId').textContent=m['ID']||'';
-  document.getElementById('spClient').value=m['Client']||'';
+  await populateClientSelect(m['Client']||'');
   document.getElementById('spType').value=m['Type']||'Formation';
   document.getElementById('spNomMis').value=m['Nom mission']||'';
   const toDateInput=s=>{
@@ -1373,7 +1425,9 @@ function updateCaNetDisplay(){
 }
 
 function resetSidePanelMission(){
-  ['spClient','spNomMis','spLieu','spHoraires'].forEach(id=>document.getElementById(id).value='');
+  ['spNomMis','spLieu','spHoraires'].forEach(id=>document.getElementById(id).value='');
+  const spCl=document.getElementById('spClient');if(spCl)spCl.value='';
+  const spClId=document.getElementById('spClientId');if(spClId)spClId.value='';
   document.getElementById('spType').value='Formation';
   document.getElementById('spStatut').value='Demande';
   document.getElementById('spDateDebut').value='';
@@ -1395,7 +1449,7 @@ function fermerSidePanel(){document.getElementById('sidePanelMission').classList
 async function saveMission(){
   const mission={
     annee:ANNEE,
-    client:document.getElementById('spClient').value,
+    client:(()=>{try{return JSON.parse(decodeURIComponent(document.getElementById('spClient').value||'')).nom||'';}catch(e){return document.getElementById('spClient').value||'';}}()),
     type:document.getElementById('spType').value,
     nom_mission:document.getElementById('spNomMis').value,
     date_debut:document.getElementById('spDateDebut').value,
