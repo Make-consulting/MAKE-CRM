@@ -431,8 +431,8 @@ tbody td strong{color:var(--text);font-weight:500}
     <div class="fr"><div class="fg"><label class="fl">Type</label><select class="fs" id="spType"><option>Formation</option><option>Consulting</option><option>Assistance</option><option>Audit</option><option>Autre</option></select></div><div class="fg"><label class="fl">Statut</label><select class="fs" id="spStatut"><option>Demande</option><option>Devis envoyé</option><option>Confirmé</option><option>À venir</option><option>En cours</option><option>Terminé</option><option>Annulé</option><option>Abandonné</option></select></div></div>
     <div class="fg"><label class="fl">Nom mission</label><input class="fi" id="spNomMis"></div>
     <div class="fr"><div class="fg"><label class="fl">Date début</label><input class="fi" type="date" id="spDateDebut"></div><div class="fg"><label class="fl">Date fin</label><input class="fi" type="date" id="spDateFin"></div></div>
-    <div class="fr"><div class="fg"><label class="fl">Jours</label><input class="fi" type="number" id="spJours" step="0.5" min="0"></div><div class="fg"><label class="fl">Lieu</label><input class="fi" id="spLieu"></div></div>
-    <div class="fg"><label class="fl">Horaires</label><input class="fi" id="spHoraires" placeholder="9h–17h"></div>
+    <div class="fr"><div class="fg"><label class="fl">Jours prévus</label><input class="fi" type="number" id="spJours" step="0.5" min="0"></div><div class="fg"><label class="fl">Jours réalisés</label><input class="fi" type="number" id="spJoursReal" step="0.5" min="0"></div></div>
+    <div class="fr"><div class="fg"><label class="fl">Lieu</label><input class="fi" id="spLieu"></div><div class="fg"><label class="fl">Horaires</label><input class="fi" id="spHoraires" placeholder="9h–17h"></div></div>
     <div class="ca-net-box">
       <div style="font-size:11px;font-weight:600;color:var(--text2);margin-bottom:10px">Frais mission</div>
       <div class="fr"><div class="fg"><label class="fl">Forfait HT (€)</label><input class="fi" type="number" id="spForfait" step="0.01" oninput="updateCaNetDisplay()"></div><div class="fg"><label class="fl">Frais mission (€)</label><input class="fi" type="number" id="spFrais" step="0.01" oninput="updateCaNetDisplay()"></div></div>
@@ -1318,11 +1318,11 @@ function onSelectClientMission(){
 
 function renderKPIMissions(list){
   const total=list.length;
-  const ca_prevu=list.filter(m=>['Confirmé','À venir','En cours','Terminé'].includes(m['Statut'])).reduce((s,m)=>s+(parseFloat(m['Forfait HT (€)'])||0),0);
-  const ca_net=list.reduce((s,m)=>s+(parseFloat(m['CA net frais (€)'])||0),0);
-  const total_frais=list.reduce((s,m)=>s+(parseFloat(m['Frais mission (€)'])||0),0);
+  const ca_prevu=list.filter(m=>['Confirmé','À venir','En cours','Terminé'].includes(m['Statut'])).reduce((s,m)=>s+(parseFloat(m['Forfait HT'])||0),0);
+  const ca_net=list.reduce((s,m)=>s+(parseFloat(m['CA net frais'])||0),0);
+  const total_frais=list.reduce((s,m)=>s+(parseFloat(m['Frais mission'])||0),0);
   const annules=list.filter(m=>m['Statut']==='Annulé');
-  const ca_annule=annules.reduce((s,m)=>s+(parseFloat(m['Forfait HT (€)'])||0),0);
+  const ca_annule=annules.reduce((s,m)=>s+(parseFloat(m['Forfait HT'])||0),0);
   document.getElementById('kpiMis').innerHTML=`
     <div class="kpi-card" style="--ac:var(--accent)"><div class="kpi-label">Total missions</div><div class="kpi-value">${total}</div><div class="kpi-sub">${ANNEE}</div></div>
     <div class="kpi-card" style="--ac:var(--green)"><div class="kpi-label">CA prévu</div><div class="kpi-value">${fmt(ca_prevu)} €</div><div class="kpi-sub">Confirmé + En cours + Terminé</div></div>
@@ -1358,7 +1358,7 @@ function renderTableMissions(list){
     <td>${m['Nom mission']||''}</td>
     <td style="font-size:11px;white-space:nowrap">${fmtDate(m['Date début'])||'—'}${m['Date fin']?' → '+fmtDate(m['Date fin']):''}</td>
     <td class="tn">${parseFloat(m['Jours prévus']||0).toFixed(1)}</td>
-    <td class="tn"><strong>${fmt(m['Forfait HT (€)']||0)} €</strong></td>
+    <td class="tn"><strong>${fmt(m['Forfait HT']||0)} €</strong></td>
     <td><span class="st ${missionStatutClass(m['Statut'])}">${m['Statut']||''}</span></td>
     <td onclick="event.stopPropagation()" style="white-space:nowrap">
       <button class="btn btn-ghost btn-sm" onclick="ouvrirFicheMission(${m._ligne})" title="Ouvrir fiche"><i class="fa-solid fa-pen"></i></button>
@@ -1390,7 +1390,7 @@ function renderProjectionMissions(){
       if(!isNaN(d))mIdx=d.getMonth();
     }
     if(mIdx<0)return;
-    const forfait=parseFloat(m['Forfait HT (€)'])||0;
+    const forfait=parseFloat(m['Forfait HT'])||0;
     const jours=parseFloat(m['Jours prévus'])||0;
     const st=m['Statut'];
     if(['Confirmé','À venir','En cours'].includes(st)){caPrevu[mIdx]+=forfait;joursPrevu[mIdx]+=jours;}
@@ -1435,8 +1435,9 @@ async function ouvrirFicheMission(ligne){
   document.getElementById('spDateDebut').value=toDateInput(m['Date début']);
   document.getElementById('spDateFin').value=toDateInput(m['Date fin']);
   document.getElementById('spJours').value=m['Jours prévus']||0;
-  document.getElementById('spForfait').value=m['Forfait HT (€)']||0;
-  document.getElementById('spFrais').value=m['Frais mission (€)']||0;
+  document.getElementById('spJoursReal').value=m['Jours réalisés']||0;
+  document.getElementById('spForfait').value=m['Forfait HT']||0;
+  document.getElementById('spFrais').value=m['Frais mission']||0;
   document.getElementById('spLieu').value=m['Lieu']||'';
   document.getElementById('spHoraires').value=m['Horaires']||'';
   document.getElementById('spStatut').value=m['Statut']||'Demande';
@@ -1477,6 +1478,7 @@ function resetSidePanelMission(){
   document.getElementById('spDateDebut').value='';
   document.getElementById('spDateFin').value='';
   document.getElementById('spJours').value=0;
+  document.getElementById('spJoursReal').value=0;
   document.getElementById('spForfait').value=0;
   document.getElementById('spFrais').value=0;
   const dSel=document.getElementById('spNumDevis');if(dSel)dSel.value='';
@@ -1502,7 +1504,8 @@ async function saveMission(){
     nom_mission:document.getElementById('spNomMis').value,
     date_debut:document.getElementById('spDateDebut').value,
     date_fin:document.getElementById('spDateFin').value,
-    jours:document.getElementById('spJours').value,
+    jours_prevus:document.getElementById('spJours').value,
+    jours_realises:document.getElementById('spJoursReal').value,
     forfait_ht:document.getElementById('spForfait').value,
     frais_mission:document.getElementById('spFrais').value,
     lieu:document.getElementById('spLieu').value,

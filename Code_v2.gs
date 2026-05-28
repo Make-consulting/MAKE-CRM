@@ -170,7 +170,7 @@ function lireKPI(annee) {
       const misH=misData[1]||[];
       let fraisIdx=-1,anneeIdx=-1;
       misH.forEach((h,j)=>{
-        if(String(h)==="Frais mission (€)")fraisIdx=j;
+        if(String(h)==="Frais mission")fraisIdx=j;
         if(String(h)==="Année")anneeIdx=j;
       });
       if(fraisIdx>=0&&anneeIdx>=0){
@@ -268,7 +268,7 @@ function lireFiretraining() {
 //       12=Jours prévus, 13=Jours réalisés, 14=Forfait HT (€),
 //       15=Frais mission (€), 16=CA net frais (€), 17=Devis lié,
 //       18=Facture liée, 19=Ajouté au calendrier, 20=Commentaires JSON
-const MISSIONS_HEADERS = ["ID","Année","Client","ID Client","Type","Nom mission","Statut","Date début","Date fin","Lieu","Horaires","Jours prévus","Jours réalisés","Forfait HT (€)","Frais mission (€)","CA net frais (€)","Devis lié","Facture liée","Ajouté au calendrier","Commentaires JSON"];
+const MISSIONS_HEADERS = ["ID","Année","Client","ID Client","Type","Nom mission","Statut","Date début","Date fin","Lieu","Horaires","Jours prévus","Jours réalisés","Forfait HT","Frais mission","CA net frais","Devis lié","Facture liée","Ajouté au calendrier","Commentaires JSON"];
 
 function getMissionsSheet() {
   const ss = SpreadsheetApp.openById(SHEET_ID);
@@ -325,7 +325,7 @@ function ajouterMission(m) {
     m.date_fin || "",                   // 9 : Date fin
     m.lieu || "",                       // 10 : Lieu
     m.horaires || "",                   // 11 : Horaires
-    parseFloat(m.jours) || 0,          // 12 : Jours prévus
+    parseFloat(m.jours_prevus) || 0,    // 12 : Jours prévus
     parseFloat(m.jours_realises) || 0, // 13 : Jours réalisés
     forfait,                            // 14 : Forfait HT (€)
     frais,                              // 15 : Frais mission (€)
@@ -353,7 +353,7 @@ function modifierMission(ligne, m) {
     [9,  m.date_fin],
     [10, m.lieu],
     [11, m.horaires],
-    [12, parseFloat(m.jours) || 0],
+    [12, parseFloat(m.jours_prevus) || 0],
     [13, parseFloat(m.jours_realises) || 0],
     [14, forfait],
     [15, frais],
