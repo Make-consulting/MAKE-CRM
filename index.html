@@ -1447,9 +1447,12 @@ function ouvrirSidePanel(){document.getElementById('sidePanelMission').classList
 function fermerSidePanel(){document.getElementById('sidePanelMission').classList.remove('open');document.getElementById('spOverlay').style.display='none';currentMission=null;}
 
 async function saveMission(){
+  let _clientNom='';
+  try{_clientNom=JSON.parse(decodeURIComponent(document.getElementById('spClient').value||'')).nom||'';}
+  catch(e){_clientNom=document.getElementById('spClient').value||'';}
   const mission={
     annee:ANNEE,
-    client:(()=>{try{return JSON.parse(decodeURIComponent(document.getElementById('spClient').value||'')).nom||'';}catch(e){return document.getElementById('spClient').value||'';}}()),
+    client:_clientNom,
     type:document.getElementById('spType').value,
     nom_mission:document.getElementById('spNomMis').value,
     date_debut:document.getElementById('spDateDebut').value,
