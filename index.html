@@ -1357,7 +1357,7 @@ function renderTableMissions(list){
     <td><span class="badge b-info" style="font-size:10px">${m['Type']||''}</span></td>
     <td>${m['Nom mission']||''}</td>
     <td style="font-size:11px;white-space:nowrap">${fmtDate(m['Date début'])||'—'}${m['Date fin']?' → '+fmtDate(m['Date fin']):''}</td>
-    <td class="tn">${parseFloat(m['Jours']||0).toFixed(1)}</td>
+    <td class="tn">${parseFloat(m['Jours prévus']||0).toFixed(1)}</td>
     <td class="tn"><strong>${fmt(m['Forfait HT (€)']||0)} €</strong></td>
     <td><span class="st ${missionStatutClass(m['Statut'])}">${m['Statut']||''}</span></td>
     <td onclick="event.stopPropagation()" style="white-space:nowrap">
@@ -1391,7 +1391,7 @@ function renderProjectionMissions(){
     }
     if(mIdx<0)return;
     const forfait=parseFloat(m['Forfait HT (€)'])||0;
-    const jours=parseFloat(m['Jours'])||0;
+    const jours=parseFloat(m['Jours prévus'])||0;
     const st=m['Statut'];
     if(['Confirmé','À venir','En cours'].includes(st)){caPrevu[mIdx]+=forfait;joursPrevu[mIdx]+=jours;}
     else if(st==='Terminé'){caRealise[mIdx]+=forfait;joursPrevu[mIdx]+=jours;}
@@ -1434,7 +1434,7 @@ async function ouvrirFicheMission(ligne){
   };
   document.getElementById('spDateDebut').value=toDateInput(m['Date début']);
   document.getElementById('spDateFin').value=toDateInput(m['Date fin']);
-  document.getElementById('spJours').value=m['Jours']||0;
+  document.getElementById('spJours').value=m['Jours prévus']||0;
   document.getElementById('spForfait').value=m['Forfait HT (€)']||0;
   document.getElementById('spFrais').value=m['Frais mission (€)']||0;
   document.getElementById('spLieu').value=m['Lieu']||'';
@@ -1442,9 +1442,9 @@ async function ouvrirFicheMission(ligne){
   document.getElementById('spStatut').value=m['Statut']||'Demande';
   // Devis/facture selects
   const dSel=document.getElementById('spNumDevis');
-  if(dSel)dSel.value=m['N° Devis lié']||'';
+  if(dSel)dSel.value=m['Devis lié']||'';
   const fSel=document.getElementById('spNumFacture');
-  if(fSel)fSel.value=m['N° Facture liée']||'';
+  if(fSel)fSel.value=m['Facture liée']||'';
   updateCaNetDisplay();
   const calBtn=document.getElementById('spBtnCalendar');
   if(m['Ajouté au calendrier']==='Oui'){calBtn.innerHTML='<i class="fa-solid fa-calendar-check"></i> Ajouté au calendrier';calBtn.disabled=true;}
@@ -1497,6 +1497,7 @@ async function saveMission(){
   const mission={
     annee:ANNEE,
     client:_clientNom,
+    id_client:document.getElementById('spClientId')?.value||'',
     type:document.getElementById('spType').value,
     nom_mission:document.getElementById('spNomMis').value,
     date_debut:document.getElementById('spDateDebut').value,
