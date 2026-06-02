@@ -289,7 +289,7 @@ tbody td strong{color:var(--text);font-weight:500}
 
     <!-- FACTURES -->
     <div id="screen-factures" class="screen">
-      <div class="kpi-grid" style="grid-template-columns:repeat(4,1fr)" id="kpiFact"></div>
+      <div class="kpi-grid" style="grid-template-columns:repeat(5,1fr)" id="kpiFact"></div>
       <div class="card">
         <div class="card-header"><div class="card-title">Factures <span id="anneeFactLbl"></span></div>
           <select class="fs" style="width:150px" onchange="filtrerFactures(this.value)"><option value="">Tous statuts</option><option>Payé</option><option>En attente</option><option>À émettre</option></select>
@@ -753,16 +753,22 @@ function renderKPI(){
   const occ_col=taux_occ_pct<80?'var(--green)':taux_occ_pct<=95?'var(--amber)':'var(--red)';
   const occ_badge=taux_occ_pct<80?'b-ok':taux_occ_pct<=95?'b-warn':'b-danger';
   const occ_label=taux_occ_pct<80?'Serein':taux_occ_pct<=95?'Chargé':'Saturé';
+  const cfe_data=JSON.parse(localStorage.getItem('cfe_'+ANNEE)||'{}');
+  const cfe_montant=parseFloat(cfe_data.montant||0)||0;
+  const mois=d.mois_ecoules||(new Date().getMonth()+1);
+  const urssaf_est=Math.round((d.ca_encaisse||0)*0.242);
+  const net_brut=(d.ca_encaisse||0)-(d.depenses_total||0)-cfe_montant-urssaf_est-(d.frais_missions||0);
+  const net_mensuel=mois>0?Math.round(net_brut/mois):0;
+  const projection_12m=Math.round(net_mensuel*12+(d.missions_a_venir||0));
   document.getElementById('kpiGrid').innerHTML=`
     <div class="kpi-card" style="--ac:var(--accent)"><div class="kpi-label">CA Facturé ${ANNEE}</div><div class="kpi-value">${fmt(d.ca_facture||0)} €</div><div class="pb"><div class="pf" style="width:${Math.min(pct,100)}%;background:var(--accent)"></div></div><div class="kpi-sub">${pct}% de ${fmt(obj)} €</div></div>
     <div class="kpi-card" style="--ac:var(--green)"><div class="kpi-label">Encaissé</div><div class="kpi-value">${fmt(d.ca_encaisse||0)} €</div><span class="badge b-ok">Payé</span></div>
     <div class="kpi-card" style="--ac:var(--amber)"><div class="kpi-label">En attente</div><div class="kpi-value">${fmt(d.ca_attente||0)} €</div><span class="badge b-warn">À encaisser</span></div>
     <div class="kpi-card" style="--ac:var(--teal)"><div class="kpi-label">Taux d'occupation</div><div class="kpi-value">${taux_occ_pct}%</div><div class="pb"><div class="pf" style="width:${Math.min(taux_occ_pct,100)}%;background:${occ_col}"></div></div><div class="kpi-sub">${d.jours_factures||0} j / 228 jours ouvrés</div><span class="badge ${occ_badge}">${occ_label}</span></div>
-    ${(d.projection_annuelle||0)>0?`<div class="kpi-card" style="--ac:var(--accent2)"><div class="kpi-label">Projection annuelle</div><div class="kpi-value">${d.projection_annuelle} j</div><div class="kpi-sub">au rythme actuel</div></div>`:''}
+    <div class="kpi-card" style="--ac:var(--accent2)"><div class="kpi-label">Net mensuel</div><div class="kpi-value">${fmt(net_mensuel)} €</div><div class="kpi-sub">Projection 12 mois : ${fmt(projection_12m)} €</div></div>
     <div class="kpi-card" style="--ac:var(--accent2)"><div class="kpi-label">SDIS 77</div><div class="kpi-value">${fmt(d.sdis||0)} €</div><div class="kpi-sub">${Math.round(d.sdis_heures||0)} h · ${ratio_h24} gardes/24h · ${fmt(eur_garde)} €/garde</div></div>
     <div class="kpi-card" style="--ac:var(--teal)"><div class="kpi-label">Immo net</div><div class="kpi-value">${d.immo_net>=0?fmt(d.immo_net):'-'+fmt(Math.abs(d.immo_net))} €</div><div class="kpi-sub">Bien Trilport</div></div>
-    ${(d.devis_attente||0)>0?`<div class="kpi-card" style="--ac:var(--amber)"><div class="kpi-label">Devis en attente</div><div class="kpi-value">${d.devis_attente}</div><span class="badge b-warn">Sans réponse</span></div>`:''}
-    ${'total_frais_missions' in d?`<div class="kpi-card" style="--ac:var(--teal)"><div class="kpi-label">CA net de frais</div><div class="kpi-value">${fmt((d.ca_facture||0)-(d.total_frais_missions||0))} €</div><div class="kpi-sub">Frais mission : ${fmt(d.total_frais_missions||0)} €</div></div><div class="kpi-card" style="--ac:var(--accent2)"><div class="kpi-label">Revenu net estimé</div><div class="kpi-value">${fmt(Math.round(((d.ca_facture||0)-(d.total_frais_missions||0))*0.758))} €</div><div class="kpi-sub">Après URSSAF 24,2%</div></div>`:''}`;
+    ${(d.devis_attente||0)>0?`<div class="kpi-card" style="--ac:var(--amber)"><div class="kpi-label">Devis en attente</div><div class="kpi-value">${d.devis_attente}</div><span class="badge b-warn">Sans réponse</span></div>`:''}`;
 }
 
 function renderFAtt(){
@@ -1004,11 +1010,13 @@ function renderKPIFact(list){
   const tot=list.reduce((s,f)=>s+(parseFloat(f['Montant HT (€)'])||0),0);
   const pay=list.filter(f=>f['Statut']==='Payé').reduce((s,f)=>s+(parseFloat(f['Montant HT (€)'])||0),0);
   const att=list.filter(f=>f['Statut']==='En attente').reduce((s,f)=>s+(parseFloat(f['Montant HT (€)'])||0),0);
+  const tva_coll=list.reduce((s,f)=>s+(parseFloat(f['TVA (€)'])||0),0);
   document.getElementById('kpiFact').innerHTML=`
     <div class="kpi-card" style="--ac:var(--accent)"><div class="kpi-label">Total facturé</div><div class="kpi-value">${fmt(tot)} €</div></div>
     <div class="kpi-card" style="--ac:var(--green)"><div class="kpi-label">Encaissé</div><div class="kpi-value">${fmt(pay)} €</div><span class="badge b-ok">${list.filter(f=>f['Statut']==='Payé').length} fact.</span></div>
     <div class="kpi-card" style="--ac:var(--amber)"><div class="kpi-label">En attente</div><div class="kpi-value">${fmt(att)} €</div><span class="badge b-warn">${list.filter(f=>f['Statut']==='En attente').length} fact.</span></div>
-    <div class="kpi-card" style="--ac:var(--accent2)"><div class="kpi-label">À émettre</div><div class="kpi-value">${list.filter(f=>f['Statut']==='À émettre').length}</div></div>`;
+    <div class="kpi-card" style="--ac:var(--accent2)"><div class="kpi-label">À émettre</div><div class="kpi-value">${list.filter(f=>f['Statut']==='À émettre').length}</div></div>
+    <div class="kpi-card" style="--ac:var(--teal)"><div class="kpi-label">TVA collectée</div><div class="kpi-value">${fmt(tva_coll)} €</div><div class="kpi-sub">Factures de l'année</div></div>`;
 }
 function filtrerFactures(s){renderFact(s?allFact.filter(f=>f['Statut']===s):allFact);}
 function renderFact(list){
@@ -1319,14 +1327,14 @@ function onSelectClientMission(){
 function renderKPIMissions(list){
   const total=list.length;
   const ca_prevu=list.filter(m=>['Confirmé','À venir','En cours','Terminé'].includes(m['Statut'])).reduce((s,m)=>s+(parseFloat(m['Forfait HT'])||0),0);
-  const ca_net=list.reduce((s,m)=>s+(parseFloat(m['CA net frais'])||0),0);
+  const ca_projete=list.reduce((s,m)=>s+(parseFloat(m['Forfait HT'])||0),0);
   const total_frais=list.reduce((s,m)=>s+(parseFloat(m['Frais mission'])||0),0);
   const annules=list.filter(m=>m['Statut']==='Annulé');
   const ca_annule=annules.reduce((s,m)=>s+(parseFloat(m['Forfait HT'])||0),0);
   document.getElementById('kpiMis').innerHTML=`
     <div class="kpi-card" style="--ac:var(--accent)"><div class="kpi-label">Total missions</div><div class="kpi-value">${total}</div><div class="kpi-sub">${ANNEE}</div></div>
     <div class="kpi-card" style="--ac:var(--green)"><div class="kpi-label">CA prévu</div><div class="kpi-value">${fmt(ca_prevu)} €</div><div class="kpi-sub">Confirmé + En cours + Terminé</div></div>
-    <div class="kpi-card" style="--ac:var(--teal)"><div class="kpi-label">CA net frais</div><div class="kpi-value">${fmt(ca_net)} €</div></div>
+    <div class="kpi-card" style="--ac:var(--teal)"><div class="kpi-label">CA projeté</div><div class="kpi-value">${fmt(ca_projete)} €</div><div class="kpi-sub">Missions affichées</div></div>
     <div class="kpi-card" style="--ac:var(--amber)"><div class="kpi-label">Frais de mission</div><div class="kpi-value">${fmt(total_frais)} €</div></div>
     <div class="kpi-card" style="--ac:var(--red)"><div class="kpi-label">Missions annulées</div><div class="kpi-value">${annules.length}</div><div class="kpi-sub">${fmt(ca_annule)} €</div></div>`;
 }
@@ -1345,6 +1353,7 @@ function filtrerMissions(){
     if(client&&m['Client']!==client)return false;
     return true;
   });
+  renderKPIMissions(filteredMissions);
   renderTableMissions(filteredMissions);
 }
 
