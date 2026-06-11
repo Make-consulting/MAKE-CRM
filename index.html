@@ -656,7 +656,7 @@ async function testerConnexion(){
   btn.disabled=false;btn.innerHTML='<i class="fa-solid fa-plug"></i> Tester la connexion';
 }
 let ANNEE=2026;
-let DATA={kpi:null,factures:[],devis:[],clients:[],prospects:[],depenses:[],sdis:null,immo:null,locataires:[],historique:null,firetraining:null,missions:[]};
+let DATA={kpi:null,config:null,factures:[],devis:[],clients:[],prospects:[],depenses:[],sdis:null,immo:null,locataires:[],historique:null,firetraining:null,missions:[]};
 let allMissions=[],filteredMissions=[],chartMissions=null,currentMission=null;
 let allFact=[],allDevis=[],allProsp=[];
 let docType='devis',docLignes=[],docNumActuel='',chartCA=null,chartMix=null,chartHist=null,chartJours=null;
@@ -737,6 +737,7 @@ async function syncAll(){
 
 // ── DASHBOARD ─────────────────────────────────────────
 async function loadDashboard(){
+  if(!DATA.config){const cr=await api('lire_config');DATA.config=cr||{};}
   if(!DATA.kpi){document.getElementById('kpiGrid').innerHTML='<div class="loader"><i class="fa-solid fa-rotate"></i> Chargement...</div>';DATA.kpi=await api('lire_kpi',{annee:ANNEE});}
   renderKPI();
   if(!DATA.factures.length){const r=await api('lire_factures',{annee:ANNEE});DATA.factures=r.factures||[];allFact=DATA.factures;}
@@ -1569,6 +1570,7 @@ async function initNouveauDoc(){
   if(!DATA.clients.length){const cr=await api('lire_clients');DATA.clients=cr.clients||[];}
   DATA.clients.forEach(c=>{const o=document.createElement('option');const addr=[c['Adresse'],c['CP'],c['Ville']].filter(Boolean).join(', ');o.value=JSON.stringify({nom:c['Entreprise']||'',email:c['Email']||'',addr,siren:c['SIREN/SIRET']||'',tva:parseInt(c['TVA (%)']||'0')||0});o.textContent=c['Entreprise']||'';sel.appendChild(o);});
   setDocType('devis');docLignes=[];ajouterLigneDoc();
+  if(!DATA.config){const cr=await api('lire_config');DATA.config=cr||{};}
   // Générer numéro auto
   const r=await api('generer_numero_devis',{annee:ANNEE});
   docNumActuel=r.numero||('DV'+ANNEE+'-001');
@@ -1623,12 +1625,12 @@ function updateDocPreview(){
   const tvaAmt=Math.round(totHT*tva/100*100)/100;const ttc=totHT+tvaAmt;
   const ds=date?new Date(date).toLocaleDateString('fr-FR',{day:'numeric',month:'long',year:'numeric'}):'';
   document.getElementById('docPreview').innerHTML=`
-    <div class="dh"><div><div class="dt">${docType==='devis'?'DEVIS':'FACTURE'}</div><div style="font-size:11px;color:#666;margin-top:2px">MAKE Consulting · Maxence SOILEUX</div></div><div style="text-align:right"><div style="font-weight:600;font-size:13px">${num||'—'}</div><div style="font-size:11px;color:#555">Date : ${ds||'—'}</div>${docType==='devis'?'<div style="font-size:10px;color:#888;margin-top:3px">Valable 30 jours</div>':''}</div></div>
-    <div class="da"><div><div class="dal">Émetteur</div><div class="dan">Maxence SOILEUX</div><div>02 rue Vandana Shiva<br>93450 L'Île Saint Denis</div><div style="margin-top:5px;font-size:10px;color:#666">SIREN : 879 519 221 · SIRET : 879 519 221 00011<br>APE 7112B · msoileux.make@gmail.com</div></div><div><div class="dal">Client</div><div class="dan">${client.nom||'—'}</div>${client.addr?`<div>${client.addr.replace(/,\s*/g,'<br>')}</div>`:''}${client.email?`<div style="font-size:10px;color:#666;margin-top:3px">${client.email}</div>`:''}${client.siren?`<div style="font-size:10px;color:#666">SIREN : ${client.siren}</div>`:''}</div></div>
+    <div class="dh"><div><div class="dt">${docType==='devis'?'DEVIS':'FACTURE'}</div><div style="font-size:11px;color:#666;margin-top:2px">MAKE Consulting · ${(DATA.config||{})['Nom']||''}</div></div><div style="text-align:right"><div style="font-weight:600;font-size:13px">${num||'—'}</div><div style="font-size:11px;color:#555">Date : ${ds||'—'}</div>${docType==='devis'?'<div style="font-size:10px;color:#888;margin-top:3px">Valable 30 jours</div>':''}</div></div>
+    <div class="da"><div><div class="dal">Émetteur</div><div class="dan">${(DATA.config||{})['Nom']||''}</div><div>${(DATA.config||{})['Adresse']||''}</div><div style="margin-top:5px;font-size:10px;color:#666">SIREN : ${(DATA.config||{})['SIREN']||''} · SIRET : ${(DATA.config||{})['SIRET']||''}<br>APE ${(DATA.config||{})['Code APE']||''} · ${(DATA.config||{})['Email']||''}</div></div><div><div class="dal">Client</div><div class="dan">${client.nom||'—'}</div>${client.addr?`<div>${client.addr.replace(/,\s*/g,'<br>')}</div>`:''}${client.email?`<div style="font-size:10px;color:#666;margin-top:3px">${client.email}</div>`:''}${client.siren?`<div style="font-size:10px;color:#666">SIREN : ${client.siren}</div>`:''}</div></div>
     ${desc?`<div style="background:#f8f9fa;padding:9px 11px;border-radius:6px;margin-bottom:12px;font-size:11px">${desc}</div>`:''}
     ${periode?`<div style="font-size:10px;color:#666;margin-bottom:10px">Période : ${periode}</div>`:''}
     ${docLignes.length?`<table class="dtb"><thead><tr><th>Description</th><th>Détail</th><th style="text-align:right">Montant HT</th></tr></thead><tbody>${docLignes.map(l=>`<tr><td>${l.desc||'—'}</td><td>${l.detail||''}</td><td style="text-align:right">${(parseFloat(l.pu)||0).toLocaleString('fr-FR',{minimumFractionDigits:2})} €</td></tr>`).join('')}</tbody></table><div class="dtot"><div class="dtot-in"><div class="dtr"><span>Total HT</span><span>${totHT.toLocaleString('fr-FR',{minimumFractionDigits:2})} €</span></div><div class="dtr"><span>TVA ${tva}%</span><span>${tvaAmt.toLocaleString('fr-FR',{minimumFractionDigits:2})} €</span></div><div class="dtf"><span>Total TTC</span><span>${ttc.toLocaleString('fr-FR',{minimumFractionDigits:2})} €</span></div></div></div>`:'<div style="text-align:center;padding:16px;color:#aaa;font-size:11px">Ajoutez des lignes de prestation</div>'}
-    <div class="df"><div>Conditions de paiement : selon contrat de prestation.</div><div>IBAN : FR36 2004 1010 0526 2778 9M02 650</div>${tva===0?'<div>TVA non applicable — art. 261-4-4° CGI (formation professionnelle continue)</div>':''}<div style="margin-top:7px;font-style:italic">Fait à Paris, le ${ds||'—'} — Maxence SOILEUX</div></div>`;
+    <div class="df"><div>Conditions de paiement : selon contrat de prestation.</div><div>IBAN : ${(DATA.config||{})['IBAN']||''}</div>${tva===0?'<div>TVA non applicable — art. 261-4-4° CGI (formation professionnelle continue)</div>':''}<div style="margin-top:7px;font-style:italic">Fait à ${(DATA.config||{})['Ville signature']||''}, le ${ds||'—'} — ${(DATA.config||{})['Nom']||''}</div></div>`;
 }
 
 function updateQuittancePreview(){
@@ -1637,7 +1639,7 @@ function updateQuittancePreview(){
   const loyer=parseFloat(document.getElementById('qLoyer').value)||890;
   const charges=parseFloat(document.getElementById('qCharges').value)||50;
   const tot=loyer+charges;const today=new Date().toLocaleDateString('fr-FR',{day:'numeric',month:'long',year:'numeric'});
-  document.getElementById('docPreview').innerHTML=`<div style="background:#fff;color:#1a1a1a;padding:28px;font-family:Georgia,serif;font-size:13px;line-height:1.7"><div style="text-align:center;font-size:20px;font-weight:700;margin-bottom:20px;text-transform:uppercase;letter-spacing:2px">Quittance de loyer</div><p>Je soussigné(e) <strong>Maxence SOILEUX</strong>, propriétaire du logement situé au :</p><p style="margin:10px 0;padding:10px;background:#f8f9fa;border-radius:6px"><strong>${addr}</strong></p><p>donne quittance à <strong>${loc}</strong> pour le paiement de la somme de <strong>${tot.toLocaleString('fr-FR',{minimumFractionDigits:2})} €</strong> correspondant au loyer et charges du mois de <strong>${mois} ${annee}</strong>.</p><table style="width:100%;margin:16px 0;border-collapse:collapse"><tr><td style="padding:6px 0;border-bottom:1px solid #e5e7eb">Loyer</td><td style="text-align:right;border-bottom:1px solid #e5e7eb">${loyer.toLocaleString('fr-FR',{minimumFractionDigits:2})} €</td></tr><tr><td style="padding:6px 0;border-bottom:1px solid #e5e7eb">Charges locatives</td><td style="text-align:right;border-bottom:1px solid #e5e7eb">${charges.toLocaleString('fr-FR',{minimumFractionDigits:2})} €</td></tr><tr style="font-weight:700"><td style="padding:8px 0">TOTAL</td><td style="text-align:right">${tot.toLocaleString('fr-FR',{minimumFractionDigits:2})} €</td></tr></table><div style="margin-top:32px;text-align:right"><p>Fait à Trilport, le ${today}</p><div style="margin-top:40px;border-top:1px solid #333;width:180px;display:inline-block;padding-top:8px">Maxence SOILEUX — Bailleur</div></div></div>`;
+  document.getElementById('docPreview').innerHTML=`<div style="background:#fff;color:#1a1a1a;padding:28px;font-family:Georgia,serif;font-size:13px;line-height:1.7"><div style="text-align:center;font-size:20px;font-weight:700;margin-bottom:20px;text-transform:uppercase;letter-spacing:2px">Quittance de loyer</div><p>Je soussigné(e) <strong>${(DATA.config||{})['Nom']||''}</strong>, propriétaire du logement situé au :</p><p style="margin:10px 0;padding:10px;background:#f8f9fa;border-radius:6px"><strong>${addr}</strong></p><p>donne quittance à <strong>${loc}</strong> pour le paiement de la somme de <strong>${tot.toLocaleString('fr-FR',{minimumFractionDigits:2})} €</strong> correspondant au loyer et charges du mois de <strong>${mois} ${annee}</strong>.</p><table style="width:100%;margin:16px 0;border-collapse:collapse"><tr><td style="padding:6px 0;border-bottom:1px solid #e5e7eb">Loyer</td><td style="text-align:right;border-bottom:1px solid #e5e7eb">${loyer.toLocaleString('fr-FR',{minimumFractionDigits:2})} €</td></tr><tr><td style="padding:6px 0;border-bottom:1px solid #e5e7eb">Charges locatives</td><td style="text-align:right;border-bottom:1px solid #e5e7eb">${charges.toLocaleString('fr-FR',{minimumFractionDigits:2})} €</td></tr><tr style="font-weight:700"><td style="padding:8px 0">TOTAL</td><td style="text-align:right">${tot.toLocaleString('fr-FR',{minimumFractionDigits:2})} €</td></tr></table><div style="margin-top:32px;text-align:right"><p>Fait à Trilport, le ${today}</p><div style="margin-top:40px;border-top:1px solid #333;width:180px;display:inline-block;padding-top:8px">${(DATA.config||{})['Nom']||''} — Bailleur</div></div></div>`;
 }
 
 async function sauvegarderDocument(){
@@ -1698,9 +1700,9 @@ Veuillez trouver ci-joint le ${typeDoc} n°${num} en date du ${ds} pour un monta
 Pour toute question, n'hésitez pas à me contacter.
 
 Cordialement,
-Maxence SOILEUX
+${(DATA.config||{})['Nom']||''}
 MAKE Consulting
-msoileux.make@gmail.com`);
+${(DATA.config||{})['Email']||''}`);
   window.location.href=`mailto:${client.email}?subject=${sujet}&body=${corps}`;
   toast('Mail ouvert vers '+client.email,'info');
 }
@@ -1717,9 +1719,9 @@ Pourriez-vous me confirmer la date prévisionnelle de paiement ?
 Je reste disponible pour tout complément d'information.
 
 Cordialement,
-Maxence SOILEUX
+${(DATA.config||{})['Nom']||''}
 MAKE Consulting
-msoileux.make@gmail.com`);
+${(DATA.config||{})['Email']||''}`);
   window.location.href=`mailto:?subject=${sujet}&body=${corps}`;
   toast('Mail de relance ouvert','info');
 }
