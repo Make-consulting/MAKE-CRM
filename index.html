@@ -374,8 +374,8 @@ tbody td strong{color:var(--text);font-weight:500}
               <div id="quittanceFields" style="display:none">
                 <div class="fr"><div class="fg"><label class="fl">Mois</label><select class="fs" id="qMois"><option>Janvier</option><option>Février</option><option>Mars</option><option>Avril</option><option>Mai</option><option>Juin</option><option>Juillet</option><option>Août</option><option>Septembre</option><option>Octobre</option><option>Novembre</option><option>Décembre</option></select></div><div class="fg"><label class="fl">Année</label><input class="fi" id="qAnnee" type="number" value="2026"></div></div>
                 <div class="fg"><label class="fl">Locataire</label><input class="fi" id="qLocataire" placeholder="NOM Prénom"></div>
-                <div class="fg"><label class="fl">Adresse du bien</label><input class="fi" id="qAdresse" value="41 rue du Maréchal Joffre, 77470 Trilport"></div>
-                <div class="fr"><div class="fg"><label class="fl">Loyer (€)</label><input class="fi" id="qLoyer" type="number" value="890"></div><div class="fg"><label class="fl">Charges (€)</label><input class="fi" id="qCharges" type="number" value="50"></div></div>
+                <div class="fg"><label class="fl">Adresse du bien</label><input class="fi" id="qAdresse"></div>
+                <div class="fr"><div class="fg"><label class="fl">Loyer (€)</label><input class="fi" id="qLoyer" type="number"></div><div class="fg"><label class="fl">Charges (€)</label><input class="fi" id="qCharges" type="number"></div></div>
                 <button class="btn btn-primary" style="width:100%;margin-top:4px" onclick="updateQuittancePreview()"><i class="fa-solid fa-eye"></i> Aperçu</button>
               </div>
             </div>
@@ -499,7 +499,7 @@ tbody td strong{color:var(--text);font-weight:500}
 <!-- Modal Loyer -->
 <div class="mo" id="mLoyer"><div class="modal">
   <div class="modal-title" id="mLoyer_titre">Valider le paiement</div>
-  <div class="fr"><div class="fg"><label class="fl">Loyer reçu (€)</label><input class="fi" type="number" id="mL_loyer" value="890"></div><div class="fg"><label class="fl">Charges reçues (€)</label><input class="fi" type="number" id="mL_charges" value="50"></div></div>
+  <div class="fr"><div class="fg"><label class="fl">Loyer reçu (€)</label><input class="fi" type="number" id="mL_loyer"></div><div class="fg"><label class="fl">Charges reçues (€)</label><input class="fi" type="number" id="mL_charges"></div></div>
   <div class="fg"><label class="fl">Date paiement</label><input class="fi" type="date" id="mL_date"></div>
   <input type="hidden" id="mL_ligne">
   <div class="modal-footer"><button class="btn btn-ghost" onclick="fermer('mLoyer')">Annuler</button><button class="btn btn-primary" onclick="saveLoyer()">Valider</button></div>
@@ -559,7 +559,7 @@ tbody td strong{color:var(--text);font-weight:500}
 <!-- Modal Locataire -->
 <div class="mo" id="mLocataire"><div class="modal">
   <div class="modal-title" id="mLoc_titre">Nouveau locataire</div>
-  <div class="fg"><label class="fl">Bien concerné</label><input class="fi" id="lBien" placeholder="41 rue du Maréchal Joffre — Trilport"></div>
+  <div class="fg"><label class="fl">Bien concerné</label><input class="fi" id="lBien" placeholder="Adresse du bien"></div>
   <div class="fr"><div class="fg"><label class="fl">Nom complet *</label><input class="fi" id="lNom"></div><div class="fg"><label class="fl">Statut</label><select class="fs" id="lStatut"><option>Actuel</option><option>Ancien</option></select></div></div>
   <div class="fr"><div class="fg"><label class="fl">Email</label><input class="fi" id="lEmail"></div><div class="fg"><label class="fl">Téléphone</label><input class="fi" id="lTel"></div></div>
   <div class="fr"><div class="fg"><label class="fl">Date d'entrée</label><input class="fi" type="date" id="lEntree"></div><div class="fg"><label class="fl">Fin bail prévue</label><input class="fi" type="date" id="lFinBail"></div></div>
@@ -671,17 +671,6 @@ let DATA={kpi:null,config:null,factures:[],devis:[],clients:[],prospects:[],depe
 let allMissions=[],filteredMissions=[],chartMissions=null,currentMission=null,missionPeriodFilter='tout';
 let allFact=[],allDevis=[],allProsp=[];
 let docType='devis',docLignes=[],docNumActuel='',chartCA=null,chartMix=null,chartHist=null,chartJours=null;
-const CLIENTS_LISTE=[
-  {nom:'PROFORM',email:'pascal@aprentiv.com',addr:'47 rue Vivienne, 75002 Paris',siren:'489 748 772 00011',tva:20},
-  {nom:'CESI Nanterre',email:'',addr:'1 av. gal de Gaulle, 92800 Puteaux',siren:'775 722 572 01109',tva:0},
-  {nom:'CERFOS - CNFPT',email:'bdevoucoux@cerfos.net',addr:'',siren:'',tva:0},
-  {nom:'ADX Formation',email:'comptafournisseurs@adx-formation.com',addr:'Parc Saint-Fiacre, 53200 Château-Gontier',siren:'842104663',tva:0},
-  {nom:'Cabinet TLC',email:'msaunier@tlcconseil.fr',addr:'26 Bd des Fédérés, 80000 Amiens',siren:'499 129 997 00023',tva:20},
-  {nom:'PROMEO AFPI',email:'v.leroux@promeo-formation.fr',addr:'240 av. Marcel Dassault, 60002 Beauvais',siren:'780 507 349',tva:0},
-  {nom:'IUT Creil',email:'',addr:'60100 Creil',siren:'',tva:0},
-  {nom:'ARCHAÏOS',email:'jessica.giraud@archaios.fr',addr:'',siren:'',tva:20},
-];
-
 // ── API JSONP ─────────────────────────────────────────
 async function api(action,params={}){
   return new Promise(resolve=>{
@@ -757,7 +746,7 @@ async function loadDashboard(){
 }
 
 function renderKPI(){
-  const d=DATA.kpi||{};const obj=60000;const pct=d.ca_facture?Math.round(d.ca_facture/obj*100):0;
+  const d=DATA.kpi||{};const obj=parseFloat((DATA.config?.objectifs||[]).find(o=>o.annee==ANNEE)?.ca_cible)||60000;const pct=d.ca_facture?Math.round(d.ca_facture/obj*100):0;
   const pp=Math.round((d.part_proform||0)*100);
   const ratio_h24=d.sdis_heures?Math.round(d.sdis_heures/24*10)/10:0;
   const eur_garde=ratio_h24>0?Math.round(d.sdis/ratio_h24):0;
@@ -779,7 +768,7 @@ function renderKPI(){
     <div class="kpi-card" style="--ac:var(--teal)"><div class="kpi-label">Taux d'occupation</div><div class="kpi-value">${taux_occ_pct}%</div><div class="pb"><div class="pf" style="width:${Math.min(taux_occ_pct,100)}%;background:${occ_col}"></div></div><div class="kpi-sub">${d.jours_factures||0} j / 228 jours ouvrés</div><span class="badge ${occ_badge}">${occ_label}</span></div>
     <div class="kpi-card" style="--ac:var(--accent2)"><div class="kpi-label">Net mensuel</div><div class="kpi-value">${fmt(net_mensuel)} €</div><div class="kpi-sub">Projection 12 mois : ${fmt(projection_12m)} €</div></div>
     <div class="kpi-card" style="--ac:var(--accent2)"><div class="kpi-label">SDIS 77</div><div class="kpi-value">${fmt(d.sdis||0)} €</div><div class="kpi-sub">${Math.round(d.sdis_heures||0)} h · ${ratio_h24} gardes/24h · ${fmt(eur_garde)} €/garde</div></div>
-    <div class="kpi-card" style="--ac:var(--teal)"><div class="kpi-label">Immo net</div><div class="kpi-value">${d.immo_net>=0?fmt(d.immo_net):'-'+fmt(Math.abs(d.immo_net))} €</div><div class="kpi-sub">Bien Trilport</div></div>
+    <div class="kpi-card" style="--ac:var(--teal)"><div class="kpi-label">Immo net</div><div class="kpi-value">${d.immo_net>=0?fmt(d.immo_net):'-'+fmt(Math.abs(d.immo_net))} €</div><div class="kpi-sub">Bien immobilier</div></div>
     ${(d.devis_attente||0)>0?`<div class="kpi-card" style="--ac:var(--amber)"><div class="kpi-label">Devis en attente</div><div class="kpi-value">${d.devis_attente}</div><span class="badge b-warn">Sans réponse</span></div>`:''}`;
 }
 
@@ -1128,6 +1117,8 @@ async function saveSDIS(){
 // ── IMMOBILIER ────────────────────────────────────────
 async function loadImmobilier(){
   const r=await api('lire_immobilier');DATA.immo=r;
+  DATA.immo.params=Object.fromEntries((r.paramLabels||[]).map(p=>[p.label,parseFloat(p.valeur)||0]));
+  DATA.immo.adresse=r.adresse||(r.paramLabels||[]).find(p=>p.label==='Adresse')?.valeur||'';
   if(!DATA.locataires.length){const lr=await api('lire_locataires');DATA.locataires=lr.locataires||[];}
   const locs=DATA.locataires;
   const params=r.paramLabels||[];const mensuel=r.mensuel||[];const hist=r.historique||[];
@@ -1135,7 +1126,7 @@ async function loadImmobilier(){
   document.getElementById('immoBiens').innerHTML=`
     <div class="bien-bloc">
       <div class="bien-top">
-        <div><div class="bien-title">41 rue du Maréchal Joffre</div><div class="bien-addr">77470 Trilport</div></div>
+        <div><div class="bien-title">${DATA.immo.adresse||'Bien immobilier'}</div></div>
         <div style="text-align:right;min-width:200px">
           <div style="font-size:10px;color:var(--text3);margin-bottom:4px">Locataire actuel</div>
           <select class="fs" style="width:200px" onchange="assignerLocataire(this.value)">
@@ -1161,7 +1152,7 @@ async function loadImmobilier(){
         </div>
       </div>
       <div style="font-size:12px;font-weight:600;color:var(--text2);margin:14px 0 10px">Paiements 2026 — cliquer pour valider</div>
-      <div class="mois-grid">${mN.map((m,i)=>{const d=mensuel[i]||{};const p=d.statut==='Payé';return`<div class="mois-cell ${p?'paye':''}" onclick="ouvrirLoyer('${m}',${d._ligne||(28+i)})"><div class="mn">${m.substring(0,3)}</div><div class="mv">${p?fmt(d.loyer_recu||890)+' €':'—'}</div><div class="mi">${p?'✅':'⬜'}</div></div>`;}).join('')}</div>
+      <div class="mois-grid">${mN.map((m,i)=>{const d=mensuel[i]||{};const p=d.statut==='Payé';return`<div class="mois-cell ${p?'paye':''}" onclick="ouvrirLoyer('${m}',${d._ligne||(28+i)})"><div class="mn">${m.substring(0,3)}</div><div class="mv">${p?fmt(d.loyer_recu||0)+' €':'—'}</div><div class="mi">${p?'✅':'⬜'}</div></div>`;}).join('')}</div>
     </div>`;
   document.getElementById('immoHistoCard').style.display='block';
   document.getElementById('tbImmoHist').innerHTML=hist.map(h=>`<tr><td><strong>${h.annee}</strong></td><td class="tn">${fmt(h.total_loyers||0)} €</td><td class="tn">${fmt(h.credit||0)} €</td><td class="tn">${fmt(h.charges_reelles||0)} €</td><td class="tn">${fmt(h.impots||0)} €</td><td class="tn" style="font-weight:700;color:${(h.net||0)<0?'var(--red)':'var(--green)'}">${fmt(h.net||0)} €</td></tr>`).join('');
@@ -1175,7 +1166,14 @@ async function saveParam(param,valeur){
   const r=await api('modifier_parametre_bien',{param,valeur});
   if(r.succes)toast('Paramètre mis à jour ✓','success');else toast('Erreur : '+(r.erreur||''),'error');
 }
-function ouvrirLoyer(m,l){document.getElementById('mLoyer_titre').textContent='Valider paiement — '+m;document.getElementById('mL_ligne').value=l;document.getElementById('mL_date').value=new Date().toISOString().split('T')[0];ouvrir('mLoyer');}
+function ouvrirLoyer(m,l){
+  document.getElementById('mLoyer_titre').textContent='Valider paiement — '+m;
+  document.getElementById('mL_ligne').value=l;
+  document.getElementById('mL_date').value=new Date().toISOString().split('T')[0];
+  document.getElementById('mL_loyer').value=DATA.immo?.params?.['Loyer mensuel (€)']||'';
+  document.getElementById('mL_charges').value=DATA.immo?.params?.['Charges mensuelles locataire (€)']||'';
+  ouvrir('mLoyer');
+}
 async function saveLoyer(){
   const r=await api('valider_paiement_loyer',{mois_ligne:document.getElementById('mL_ligne').value,loyer:document.getElementById('mL_loyer').value,charges:document.getElementById('mL_charges').value,date:document.getElementById('mL_date').value});
   if(r.succes){toast('Paiement enregistré ✓','success');fermer('mLoyer');DATA.kpi=null;loadImmobilier();}else toast('Erreur','error');
@@ -1217,6 +1215,7 @@ function ouvrirNouveauLocataire(){
   ['lBien','lNom','lEmail','lTel','lEntree','lFinBail','lEdl','lNotes'].forEach(id=>document.getElementById(id).value='');
   ['lDepot','lEauEnt','lEauAct','lElecEnt','lElecAct'].forEach(id=>document.getElementById(id).value=0);
   document.getElementById('lLigne').value='';document.getElementById('lStatut').value='Actuel';
+  document.getElementById('lBien').value=DATA.immo?.adresse||'';
   ouvrir('mLocataire');
 }
 function ouvrirModifLocataire(idx){
@@ -1673,12 +1672,25 @@ function setDocType(t){
   document.getElementById('docPeriodeWrap').style.display=t==='facture'?'block':'none';
   document.getElementById('btnSauvegarderDoc').style.display=t==='quittance'?'none':'inline-flex';
   document.getElementById('btnEnvoyerMail').style.display=t==='quittance'?'none':'inline-flex';
-  if(t!=='quittance'){
+  if(t==='quittance'){remplirQuittance();}
+  else{
     api('generer_numero_'+(t==='devis'?'devis':'facture'),{annee:ANNEE}).then(r=>{
       docNumActuel=r.numero||((t==='devis'?'DV':'FA')+ANNEE+'-001');
       document.getElementById('docNum').value=docNumActuel;updateDocPreview();
     });
   }
+}
+
+async function remplirQuittance(){
+  if(!DATA.immo){
+    const r=await api('lire_immobilier');
+    DATA.immo=r;
+    DATA.immo.params=Object.fromEntries((r.paramLabels||[]).map(p=>[p.label,parseFloat(p.valeur)||0]));
+    DATA.immo.adresse=r.adresse||(r.paramLabels||[]).find(p=>p.label==='Adresse')?.valeur||'';
+  }
+  document.getElementById('qAdresse').value=DATA.immo.adresse||'';
+  document.getElementById('qLoyer').value=DATA.immo.params?.['Loyer mensuel (€)']||'';
+  document.getElementById('qCharges').value=DATA.immo.params?.['Charges mensuelles locataire (€)']||'';
 }
 
 function remplirClient(){
@@ -1723,10 +1735,10 @@ function updateDocPreview(){
 function updateQuittancePreview(){
   const mois=document.getElementById('qMois').value,annee=document.getElementById('qAnnee').value;
   const loc=document.getElementById('qLocataire').value||'LOCATAIRE',addr=document.getElementById('qAdresse').value;
-  const loyer=parseFloat(document.getElementById('qLoyer').value)||890;
-  const charges=parseFloat(document.getElementById('qCharges').value)||50;
+  const loyer=parseFloat(document.getElementById('qLoyer').value)||0;
+  const charges=parseFloat(document.getElementById('qCharges').value)||0;
   const tot=loyer+charges;const today=new Date().toLocaleDateString('fr-FR',{day:'numeric',month:'long',year:'numeric'});
-  document.getElementById('docPreview').innerHTML=`<div style="background:#fff;color:#1a1a1a;padding:28px;font-family:Georgia,serif;font-size:13px;line-height:1.7"><div style="text-align:center;font-size:20px;font-weight:700;margin-bottom:20px;text-transform:uppercase;letter-spacing:2px">Quittance de loyer</div><p>Je soussigné(e) <strong>${(DATA.config||{})['Nom']||''}</strong>, propriétaire du logement situé au :</p><p style="margin:10px 0;padding:10px;background:#f8f9fa;border-radius:6px"><strong>${addr}</strong></p><p>donne quittance à <strong>${loc}</strong> pour le paiement de la somme de <strong>${tot.toLocaleString('fr-FR',{minimumFractionDigits:2})} €</strong> correspondant au loyer et charges du mois de <strong>${mois} ${annee}</strong>.</p><table style="width:100%;margin:16px 0;border-collapse:collapse"><tr><td style="padding:6px 0;border-bottom:1px solid #e5e7eb">Loyer</td><td style="text-align:right;border-bottom:1px solid #e5e7eb">${loyer.toLocaleString('fr-FR',{minimumFractionDigits:2})} €</td></tr><tr><td style="padding:6px 0;border-bottom:1px solid #e5e7eb">Charges locatives</td><td style="text-align:right;border-bottom:1px solid #e5e7eb">${charges.toLocaleString('fr-FR',{minimumFractionDigits:2})} €</td></tr><tr style="font-weight:700"><td style="padding:8px 0">TOTAL</td><td style="text-align:right">${tot.toLocaleString('fr-FR',{minimumFractionDigits:2})} €</td></tr></table><div style="margin-top:32px;text-align:right"><p>Fait à Trilport, le ${today}</p><div style="margin-top:40px;border-top:1px solid #333;width:180px;display:inline-block;padding-top:8px">${(DATA.config||{})['Nom']||''} — Bailleur</div></div></div>`;
+  document.getElementById('docPreview').innerHTML=`<div style="background:#fff;color:#1a1a1a;padding:28px;font-family:Georgia,serif;font-size:13px;line-height:1.7"><div style="text-align:center;font-size:20px;font-weight:700;margin-bottom:20px;text-transform:uppercase;letter-spacing:2px">Quittance de loyer</div><p>Je soussigné(e) <strong>${(DATA.config||{})['Nom']||''}</strong>, propriétaire du logement situé au :</p><p style="margin:10px 0;padding:10px;background:#f8f9fa;border-radius:6px"><strong>${addr}</strong></p><p>donne quittance à <strong>${loc}</strong> pour le paiement de la somme de <strong>${tot.toLocaleString('fr-FR',{minimumFractionDigits:2})} €</strong> correspondant au loyer et charges du mois de <strong>${mois} ${annee}</strong>.</p><table style="width:100%;margin:16px 0;border-collapse:collapse"><tr><td style="padding:6px 0;border-bottom:1px solid #e5e7eb">Loyer</td><td style="text-align:right;border-bottom:1px solid #e5e7eb">${loyer.toLocaleString('fr-FR',{minimumFractionDigits:2})} €</td></tr><tr><td style="padding:6px 0;border-bottom:1px solid #e5e7eb">Charges locatives</td><td style="text-align:right;border-bottom:1px solid #e5e7eb">${charges.toLocaleString('fr-FR',{minimumFractionDigits:2})} €</td></tr><tr style="font-weight:700"><td style="padding:8px 0">TOTAL</td><td style="text-align:right">${tot.toLocaleString('fr-FR',{minimumFractionDigits:2})} €</td></tr></table><div style="margin-top:32px;text-align:right"><p>Fait à ${(DATA.config||{})['Ville signature']||DATA.immo?.adresse?.split(' ').pop()||''}, le ${today}</p><div style="margin-top:40px;border-top:1px solid #333;width:180px;display:inline-block;padding-top:8px">${(DATA.config||{})['Nom']||''} — Bailleur</div></div></div>`;
 }
 
 async function sauvegarderDocument(){
