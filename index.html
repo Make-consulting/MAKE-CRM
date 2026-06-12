@@ -181,6 +181,11 @@ tbody td strong{color:var(--text);font-weight:500}
 .st-mis-termine{background:var(--gbg);color:var(--green)}
 .st-mis-annule{background:var(--rbg);color:var(--red)}
 .st-mis-abandonne{background:rgba(239,68,68,0.1);color:#fca5a5}
+/* MISSIONS — regroupement */
+.mis-sep-row{cursor:pointer;user-select:none}
+.mis-sep-row td{padding:5px 8px;font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;background:transparent!important}
+.mis-sep-row td .sep-inner{display:flex;align-items:center;gap:8px;white-space:nowrap}
+.mis-sep-row td .sep-inner::after{content:'';flex:1;height:1px;background:var(--border2)}
 /* SIDE PANEL */
 .side-panel{position:fixed;top:0;right:-440px;width:440px;height:100vh;background:var(--bg2);border-left:1px solid var(--border2);z-index:200;overflow:hidden;transition:right .25s ease;display:flex;flex-direction:column;box-shadow:-8px 0 32px rgba(0,0,0,.4)}
 .side-panel.open{right:0}
@@ -312,6 +317,12 @@ tbody td strong{color:var(--text);font-weight:500}
     <!-- MISSIONS -->
     <div id="screen-missions" class="screen">
       <div class="kpi-grid" id="kpiMis"></div>
+      <div style="display:flex;align-items:center;gap:6px;margin-bottom:8px">
+        <button class="btn btn-ghost btn-sm" id="btnPeriodCeMois" onclick="setMisPeriod('cemois')">Ce mois</button>
+        <button class="btn btn-ghost btn-sm" id="btnPeriod3m" onclick="setMisPeriod('3mois')">3 mois</button>
+        <button class="btn btn-ghost btn-sm" id="btnPeriod6m" onclick="setMisPeriod('6mois')">6 mois</button>
+        <button class="btn btn-primary btn-sm" id="btnPeriodTout" onclick="setMisPeriod('tout')">Tout</button>
+      </div>
       <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap">
         <div style="display:flex;gap:6px">
           <button class="btn btn-primary btn-sm" id="btnVueListe" onclick="switchVueMissions('liste')"><i class="fa-solid fa-list"></i> Vue liste</button>
@@ -657,7 +668,7 @@ async function testerConnexion(){
 }
 let ANNEE=2026;
 let DATA={kpi:null,config:null,factures:[],devis:[],clients:[],prospects:[],depenses:[],sdis:null,immo:null,locataires:[],historique:null,firetraining:null,missions:[]};
-let allMissions=[],filteredMissions=[],chartMissions=null,currentMission=null;
+let allMissions=[],filteredMissions=[],chartMissions=null,currentMission=null,missionPeriodFilter='tout';
 let allFact=[],allDevis=[],allProsp=[];
 let docType='devis',docLignes=[],docNumActuel='',chartCA=null,chartMix=null,chartHist=null,chartJours=null;
 const CLIENTS_LISTE=[
@@ -1344,15 +1355,66 @@ function missionStatutClass(s){
   return{'Demande':'st-mis-demande','Devis envoyé':'st-mis-devis','Confirmé':'st-mis-confirme','À venir':'st-mis-avenir','En cours':'st-mis-encours','Terminé':'st-mis-termine','Annulé':'st-mis-annule','Abandonné':'st-mis-abandonne'}[s]||'';
 }
 
+const MIS_STATUS_ORDER=['En cours','À venir','Confirmé','Demande','Devis envoyé','Terminé','Annulé','Abandonné'];
+const MIS_STATUS_RANK=Object.fromEntries(MIS_STATUS_ORDER.map((s,i)=>[s,i]));
+
+function parseMisDate(s){
+  if(!s)return null;
+  if(typeof s==='string'&&s.match(/^\d{4}-\d{2}-\d{2}$/))return new Date(s);
+  if(typeof s==='string'&&s.includes('/')){const p=s.split('/');return new Date(parseInt(p[2]),parseInt(p[1])-1,parseInt(p[0]));}
+  try{const d=new Date(s);return isNaN(d)?null:d;}catch(e){return null;}
+}
+
+function missionStatutColor(s){
+  return{'En cours':'#4f7cff','À venir':'#93c5fd','Confirmé':'#4ade80','Demande':'#6b7280','Devis envoyé':'#818cf8','Terminé':'#22c55e','Annulé':'#ef4444','Abandonné':'#fca5a5'}[s]||'transparent';
+}
+
+function setMisPeriod(p){
+  missionPeriodFilter=p;
+  const ids={cemois:'CeMois','3mois':'3m','6mois':'6m',tout:'Tout'};
+  Object.entries(ids).forEach(([k,sfx])=>{
+    const btn=document.getElementById('btnPeriod'+sfx);
+    if(btn)btn.className='btn btn-sm '+(k===p?'btn-primary':'btn-ghost');
+  });
+  filtrerMissions();
+}
+
+function toggleMisGroup(groupId,sepRow){
+  const collapsed=sepRow.dataset.collapsed==='1';
+  document.querySelectorAll(`tr[data-group="${groupId}"]`).forEach(r=>r.style.display=collapsed?'':'none');
+  sepRow.dataset.collapsed=collapsed?'0':'1';
+  const icon=sepRow.querySelector('i.fa-solid');
+  if(icon)icon.className='fa-solid '+(collapsed?'fa-chevron-down':'fa-chevron-right');
+}
+
 function filtrerMissions(){
   const type=document.getElementById('filterMisType')?.value||'';
   const statut=document.getElementById('filterMisStatut')?.value||'';
   const client=document.getElementById('filterMisClient')?.value||'';
+  const now=new Date();now.setHours(0,0,0,0);
   filteredMissions=allMissions.filter(m=>{
     if(type&&m['Type']!==type)return false;
     if(statut&&m['Statut']!==statut)return false;
     if(client&&m['Client']!==client)return false;
+    if(missionPeriodFilter!=='tout'){
+      const d=parseMisDate(m['Date début']);
+      if(!d||isNaN(d))return false;
+      if(missionPeriodFilter==='cemois'){
+        if(d.getFullYear()!==now.getFullYear()||d.getMonth()!==now.getMonth())return false;
+      } else {
+        const months=missionPeriodFilter==='3mois'?3:6;
+        const limit=new Date(now);limit.setMonth(limit.getMonth()+months);
+        if(d<now||d>limit)return false;
+      }
+    }
     return true;
+  });
+  filteredMissions.sort((a,b)=>{
+    const sr=(MIS_STATUS_RANK[a['Statut']]??99)-(MIS_STATUS_RANK[b['Statut']]??99);
+    if(sr!==0)return sr;
+    const da=parseMisDate(a['Date début'])||new Date(9999,0,1);
+    const db=parseMisDate(b['Date début'])||new Date(9999,0,1);
+    return da-db;
   });
   renderKPIMissions(filteredMissions);
   renderTableMissions(filteredMissions);
@@ -1361,20 +1423,45 @@ function filtrerMissions(){
 function renderTableMissions(list){
   const tb=document.getElementById('tbMissions');
   if(!tb)return;
-  tb.innerHTML=list.length?list.map(m=>`<tr style="cursor:pointer" onclick="ouvrirFicheMission(${m._ligne})">
-    <td><strong>${m['ID']||''}</strong></td>
-    <td>${m['Client']||''}</td>
-    <td><span class="badge b-info" style="font-size:10px">${m['Type']||''}</span></td>
-    <td>${m['Nom mission']||''}</td>
-    <td style="font-size:11px;white-space:nowrap">${fmtDate(m['Date début'])||'—'}${m['Date fin']?' → '+fmtDate(m['Date fin']):''}</td>
-    <td class="tn">${parseFloat(m['Jours prévus']||0).toFixed(1)}</td>
-    <td class="tn"><strong>${fmt(m['Forfait HT']||0)} €</strong></td>
-    <td><span class="st ${missionStatutClass(m['Statut'])}">${m['Statut']||''}</span></td>
-    <td onclick="event.stopPropagation()" style="white-space:nowrap">
-      <button class="btn btn-ghost btn-sm" onclick="ouvrirFicheMission(${m._ligne})" title="Ouvrir fiche"><i class="fa-solid fa-pen"></i></button>
-      ${m['Ajouté au calendrier']!=='Oui'?`<button class="btn btn-ghost btn-sm" onclick="ajouterCalendrier(${m._ligne})" title="Ajouter au calendrier"><i class="fa-solid fa-calendar-plus"></i></button>`:'<span style="font-size:11px;color:var(--text3);padding:0 6px"><i class="fa-solid fa-calendar-check"></i></span>'}
-    </td>
-  </tr>`).join(''):'<tr><td colspan="9"><div class="empty"><i class="fa-solid fa-briefcase"></i><p>Aucune mission pour '+(document.getElementById('filterMisStatut')?.value||ANNEE)+'</p></div></td></tr>';
+  if(!list.length){
+    tb.innerHTML='<tr><td colspan="9"><div class="empty"><i class="fa-solid fa-briefcase"></i><p>Aucune mission pour '+(document.getElementById('filterMisStatut')?.value||ANNEE)+'</p></div></td></tr>';
+    return;
+  }
+  const COLLAPSED_DEFAULT=new Set(['Terminé','Annulé','Abandonné']);
+  const groups={};
+  list.forEach(m=>{const s=m['Statut']||'';if(!groups[s])groups[s]=[];groups[s].push(m);});
+  let html='';
+  MIS_STATUS_ORDER.filter(s=>groups[s]?.length).forEach(s=>{
+    const missions=groups[s];
+    const color=missionStatutColor(s);
+    const collapsed=COLLAPSED_DEFAULT.has(s);
+    const gid='mg_'+s.replace(/[^a-zA-Z0-9]/g,'_');
+    html+=`<tr class="mis-sep-row" onclick="toggleMisGroup('${gid}',this)" data-collapsed="${collapsed?'1':'0'}">
+      <td colspan="9" style="border-left:3px solid ${color}">
+        <div class="sep-inner" style="color:${color}">
+          <i class="fa-solid ${collapsed?'fa-chevron-right':'fa-chevron-down'}" style="font-size:9px"></i>
+          <span>${s.toUpperCase()} (${missions.length})</span>
+        </div>
+      </td>
+    </tr>`;
+    missions.forEach(m=>{
+      html+=`<tr style="cursor:pointer${collapsed?';display:none':''}" data-group="${gid}" onclick="ouvrirFicheMission(${m._ligne})">
+        <td style="border-left:3px solid ${color}"><strong>${m['ID']||''}</strong></td>
+        <td>${m['Client']||''}</td>
+        <td><span class="badge b-info" style="font-size:10px">${m['Type']||''}</span></td>
+        <td>${m['Nom mission']||''}</td>
+        <td style="font-size:11px;white-space:nowrap">${fmtDate(m['Date début'])||'—'}${m['Date fin']?' → '+fmtDate(m['Date fin']):''}</td>
+        <td class="tn">${parseFloat(m['Jours prévus']||0).toFixed(1)}</td>
+        <td class="tn"><strong>${fmt(m['Forfait HT']||0)} €</strong></td>
+        <td><span class="st ${missionStatutClass(m['Statut'])}">${m['Statut']||''}</span></td>
+        <td onclick="event.stopPropagation()" style="white-space:nowrap">
+          <button class="btn btn-ghost btn-sm" onclick="ouvrirFicheMission(${m._ligne})" title="Ouvrir fiche"><i class="fa-solid fa-pen"></i></button>
+          ${m['Ajouté au calendrier']!=='Oui'?`<button class="btn btn-ghost btn-sm" onclick="ajouterCalendrier(${m._ligne})" title="Ajouter au calendrier"><i class="fa-solid fa-calendar-plus"></i></button>`:'<span style="font-size:11px;color:var(--text3);padding:0 6px"><i class="fa-solid fa-calendar-check"></i></span>'}
+        </td>
+      </tr>`;
+    });
+  });
+  tb.innerHTML=html;
 }
 
 function switchVueMissions(vue){
